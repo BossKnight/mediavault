@@ -1,0 +1,30 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+# "node_modules" contains every installed package. It can be 100,000+ files
+# and hundreds of MB. Never commit it — anyone can recreate it with "npm install".
+node_modules/
+
+# ── Environment files ─────────────────────────────────────────────────────────
+# .env holds your real API keys. If this ends up on GitHub, those keys are
+# exposed to the entire internet. The .env.example file (no real values) IS
+# safe to commit — it tells others what variables they need to fill in.
+server/.env
+
+# ── Generated build output ────────────────────────────────────────────────────
+# "dist" is the compiled JavaScript that TypeScript produces. It's generated
+# from source, so there's no need to track it in version control.
+server/dist/
+client/dist/
+
+# ── Personal data ─────────────────────────────────────────────────────────────
+# Your actual collection database and downloaded cover images. This is personal
+# data, not source code — it shouldn't be in a code repository.
+server/data/
+
+# ── Operating system files ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editor files ──────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.suo

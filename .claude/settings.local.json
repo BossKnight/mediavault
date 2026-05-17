@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\BossKnight\\\\Desktop\\\\Code\\\\media-vault\\\\server\\\\.env.example\" \"c:\\\\Users\\\\BossKnight\\\\Desktop\\\\Code\\\\media-vault\\\\server\\\\.env\")",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing; $r.StatusCode)"
+    ]
+  }
+}
