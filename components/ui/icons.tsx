@@ -62,3 +62,30 @@ export function Loader(props: IconProps) {
     </svg>
   );
 }
+
+export function Film(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 3v18M17 3v18M3 8h18M3 16h18" />
+    </svg>
+  );
+}
+
+export function Tv(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="m17 3-5 4-5-4" />
+    </svg>
+  );
+}
+
+export function Gamepad(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2" y="7" width="20" height="10" rx="5" />
+      <path d="M7 10v4M5 12h4M15 11h.01M18 13h.01" />
+    </svg>
+  );
+}

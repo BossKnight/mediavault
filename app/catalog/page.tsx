@@ -25,8 +25,8 @@ export default async function CatalogPage() {
         <span className="text-sm font-semibold tracking-tight text-foreground">MediaVault</span>
       </div>
 
-      <div className="mb-8 flex items-center justify-between">
-        <div>
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-foreground">Your catalog</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Movies, TV shows, and games you own or plan to get to.

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { StarRating } from "@/components/ui/star-rating";
 import { StatusBadge } from "@/features/catalog/status-badge";
+import { CoverArt } from "@/features/catalog/cover-art";
 import type { CatalogEntry } from "@/types/media";
 
 interface CatalogItemCardProps {
@@ -29,9 +30,12 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
             className="object-cover transition-transform group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            No cover
-          </div>
+          <CoverArt
+            id={mediaItem.id}
+            title={mediaItem.title}
+            mediaType={mediaItem.mediaType}
+            className="h-full w-full"
+          />
         )}
         <div className="absolute right-2 top-2">
           <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
