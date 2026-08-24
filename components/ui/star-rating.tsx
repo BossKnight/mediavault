@@ -5,7 +5,7 @@ import { Star } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 interface StarRatingProps {
-  /** 1-10, or null for "not rated". */
+  /** 1-5, or null for "not rated". */
   value: number | null;
   onChange?: (value: number | null) => void;
   readOnly?: boolean;
@@ -13,9 +13,9 @@ interface StarRatingProps {
 }
 
 /**
- * A 10-point rating control rendered as 10 small stars. Clicking the
- * already-selected star clears the rating. Read-only mode is used on
- * catalog cards; editable mode is used in the item detail form.
+ * A 5-point rating control rendered as 5 stars. Clicking the already-selected
+ * star clears the rating. Read-only mode is used on catalog cards; editable
+ * mode is used in the item detail form.
  */
 export function StarRating({ value, onChange, readOnly, className }: StarRatingProps) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -25,9 +25,9 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
     <div
       className={cn("flex items-center gap-0.5", className)}
       role={readOnly ? undefined : "radiogroup"}
-      aria-label="Rating out of 10"
+      aria-label="Rating out of 5"
     >
-      {Array.from({ length: 10 }, (_, index) => {
+      {Array.from({ length: 5 }, (_, index) => {
         const starValue = index + 1;
         const filled = starValue <= displayValue;
 
@@ -35,7 +35,7 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
           return (
             <Star
               key={starValue}
-              className={cn("h-3.5 w-3.5", filled ? "fill-accent text-accent" : "text-border")}
+              className={cn("h-4 w-4", filled ? "fill-accent text-accent" : "text-border")}
             />
           );
         }
@@ -46,7 +46,7 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
             type="button"
             role="radio"
             aria-checked={value === starValue}
-            aria-label={`${starValue} out of 10`}
+            aria-label={`${starValue} out of 5`}
             className="focus-ring rounded p-0.5"
             onMouseEnter={() => setHovered(starValue)}
             onMouseLeave={() => setHovered(null)}
@@ -54,16 +54,14 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
           >
             <Star
               className={cn(
-                "h-5 w-5 transition-colors",
+                "h-6 w-6 transition-colors",
                 filled ? "fill-accent text-accent" : "text-border hover:text-muted",
               )}
             />
           </button>
         );
       })}
-      {value != null && (
-        <span className="ml-2 text-sm text-muted">{value}/10</span>
-      )}
+      {value != null && <span className="ml-2 text-sm text-muted">{value}/5</span>}
     </div>
   );
 }

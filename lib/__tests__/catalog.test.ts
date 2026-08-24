@@ -61,13 +61,13 @@ describe("computeStats", () => {
 
   it("averages only the entries that have a rating", () => {
     const entries = [
-      makeEntry({ id: "1", rating: 8 }),
-      makeEntry({ id: "2", rating: 6 }),
+      makeEntry({ id: "1", rating: 4 }),
+      makeEntry({ id: "2", rating: 3 }),
       makeEntry({ id: "3", rating: null }),
     ];
 
     const stats = computeStats(entries);
 
-    expect(stats.averageRating).toBe(7);
+    expect(stats.averageRating).toBe(3.5);
   });
 });

@@ -77,7 +77,7 @@ model UserMediaProgress {
   mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
 
   status      WatchStatus @default(PLAN_TO_WATCH)
-  rating      Int? // 1-10, user's personal rating
+  rating      Int? // 1-5, user's personal rating
   reviewNotes String?
 
   // TV-specific progress.
