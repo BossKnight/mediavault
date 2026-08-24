@@ -34,7 +34,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
           </div>
         )}
         <div className="absolute right-2 top-2">
-          <StatusBadge status={entry.status} />
+          <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">

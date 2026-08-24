@@ -28,6 +28,33 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
 };
 
 /**
+ * Games use "In Backlog" in place of "Plan to Watch" and don't offer
+ * "On Hold" at all. The underlying WatchStatus values are shared across
+ * media types (no schema difference) — only the label and the set of
+ * choices offered in the UI vary.
+ */
+export function getStatusOptions(mediaType: MediaType): WatchStatus[] {
+  if (mediaType === "GAME") {
+    return ["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "DROPPED"];
+  }
+  return ["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"];
+}
+
+export function getStatusLabel(status: WatchStatus, mediaType: MediaType): string {
+  if (mediaType === "GAME" && status === "PLAN_TO_WATCH") {
+    return "In Backlog";
+  }
+  return WATCH_STATUS_LABELS[status];
+}
+
+/**
+ * Physical media format for movies and TV shows, stored in the same
+ * `platform` column games use for their platform (PS5, PC, Switch, ...).
+ */
+export const PHYSICAL_FORMATS = ["VHS", "DVD", "Blu-Ray", "4K UHD"] as const;
+export type PhysicalFormat = (typeof PHYSICAL_FORMATS)[number];
+
+/**
  * A single search result, normalized from whichever external provider
  * produced it. This is the shape every provider adapter must return, and the
  * shape the "Add Item" flow works with before anything is persisted.
@@ -53,8 +80,8 @@ export interface CatalogEntry {
   status: WatchStatus;
   rating: number | null;
   reviewNotes: string | null;
-  currentSeason: number | null;
-  currentEpisode: number | null;
+  ownedSeasons: number[];
+  completeSeries: boolean;
   platform: string | null;
   hoursPlayed: number | null;
   startedAt: string | null;

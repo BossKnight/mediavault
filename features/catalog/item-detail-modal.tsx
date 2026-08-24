@@ -6,7 +6,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StarRating } from "@/components/ui/star-rating";
+import { formatSeasonList, parseSeasonList } from "@/lib/seasons";
 import {
   Select,
   SelectContent,
@@ -14,15 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { WATCH_STATUS_LABELS, type CatalogEntry, type WatchStatus } from "@/types/media";
+import {
+  PHYSICAL_FORMATS,
+  getStatusLabel,
+  getStatusOptions,
+  type CatalogEntry,
+  type WatchStatus,
+} from "@/types/media";
 
-const STATUS_OPTIONS: WatchStatus[] = [
-  "PLAN_TO_WATCH",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "ON_HOLD",
-  "DROPPED",
-];
+// Sentinel for "no format/platform set" — Radix Select items can't use "".
+const PLATFORM_NONE = "NONE";
 
 interface ItemDetailModalProps {
   entry: CatalogEntry | null;
@@ -65,10 +68,9 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const [status, setStatus] = useState<WatchStatus>(entry.status);
   const [rating, setRating] = useState<number | null>(entry.rating);
   const [reviewNotes, setReviewNotes] = useState(entry.reviewNotes ?? "");
-  const [currentSeason, setCurrentSeason] = useState(entry.currentSeason?.toString() ?? "");
-  const [currentEpisode, setCurrentEpisode] = useState(entry.currentEpisode?.toString() ?? "");
+  const [completeSeries, setCompleteSeries] = useState(entry.completeSeries);
+  const [ownedSeasonsText, setOwnedSeasonsText] = useState(formatSeasonList(entry.ownedSeasons));
   const [platform, setPlatform] = useState(entry.platform ?? "");
-  const [hoursPlayed, setHoursPlayed] = useState(entry.hoursPlayed?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -84,13 +86,12 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
       reviewNotes: reviewNotes.trim() || null,
     };
     if (mediaItem.mediaType === "TV") {
-      body.currentSeason = currentSeason ? Number(currentSeason) : null;
-      body.currentEpisode = currentEpisode ? Number(currentEpisode) : null;
+      body.completeSeries = completeSeries;
+      body.ownedSeasons = completeSeries ? [] : parseSeasonList(ownedSeasonsText);
     }
-    if (mediaItem.mediaType === "GAME") {
-      body.platform = platform.trim() || null;
-      body.hoursPlayed = hoursPlayed ? Number(hoursPlayed) : null;
-    }
+    // Movies and TV store their physical format (VHS/DVD/Blu-Ray/4K UHD) and
+    // games their platform (PS5, PC, Switch...) in the same `platform` field.
+    body.platform = platform.trim() || null;
 
     try {
       const response = await fetch(`/api/catalog/${entryId}`, {
@@ -166,9 +167,9 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
+                  {getStatusOptions(mediaItem.mediaType).map((option) => (
                     <SelectItem key={option} value={option}>
-                      {WATCH_STATUS_LABELS[option]}
+                      {getStatusLabel(option, mediaItem.mediaType)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -182,49 +183,62 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
           </div>
 
           {mediaItem.mediaType === "TV" && (
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Season</span>
-                <Input
-                  type="number"
-                  min={0}
-                  value={currentSeason}
-                  onChange={(event) => setCurrentSeason(event.target.value)}
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={completeSeries}
+                  onChange={(event) => setCompleteSeries(event.target.checked)}
                 />
+                <span className="font-medium text-white">Complete series (own every season)</span>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Episode</span>
-                <Input
-                  type="number"
-                  min={0}
-                  value={currentEpisode}
-                  onChange={(event) => setCurrentEpisode(event.target.value)}
-                />
-              </label>
+
+              {!completeSeries && (
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-white">Seasons owned</span>
+                  <Input
+                    value={ownedSeasonsText}
+                    onChange={(event) => setOwnedSeasonsText(event.target.value)}
+                    placeholder="e.g. 1, 2, 6"
+                  />
+                  <span className="text-xs text-muted">
+                    List the season numbers you own, separated by commas.
+                  </span>
+                </label>
+              )}
             </div>
           )}
 
+          {(mediaItem.mediaType === "MOVIE" || mediaItem.mediaType === "TV") && (
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-white">Platform</span>
+              <Select
+                value={platform || PLATFORM_NONE}
+                onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
+                  {PHYSICAL_FORMATS.map((format) => (
+                    <SelectItem key={format} value={format}>
+                      {format}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          )}
+
           {mediaItem.mediaType === "GAME" && (
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Platform</span>
-                <Input
-                  value={platform}
-                  onChange={(event) => setPlatform(event.target.value)}
-                  placeholder="PS5, PC, Switch..."
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Hours played</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={hoursPlayed}
-                  onChange={(event) => setHoursPlayed(event.target.value)}
-                />
-              </label>
-            </div>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-white">Platform</span>
+              <Input
+                value={platform}
+                onChange={(event) => setPlatform(event.target.value)}
+                placeholder="PS5, PC, Switch..."
+              />
+            </label>
           )}
 
           <label className="flex flex-col gap-1.5 text-sm">

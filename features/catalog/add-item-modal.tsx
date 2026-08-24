@@ -17,7 +17,8 @@ import {
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   MEDIA_TYPE_LABELS,
-  WATCH_STATUS_LABELS,
+  getStatusLabel,
+  getStatusOptions,
   type CatalogEntry,
   type MediaType,
   type UnifiedSearchResult,
@@ -25,13 +26,6 @@ import {
 } from "@/types/media";
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
-const STATUS_OPTIONS: WatchStatus[] = [
-  "PLAN_TO_WATCH",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "ON_HOLD",
-  "DROPPED",
-];
 
 interface AddItemModalProps {
   onAdded: (entry: CatalogEntry) => void;
@@ -265,9 +259,9 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
+                  {getStatusOptions(selected.mediaType).map((option) => (
                     <SelectItem key={option} value={option}>
-                      {WATCH_STATUS_LABELS[option]}
+                      {getStatusLabel(option, selected.mediaType)}
                     </SelectItem>
                   ))}
                 </SelectContent>

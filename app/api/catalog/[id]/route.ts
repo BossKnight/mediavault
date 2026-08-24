@@ -10,8 +10,8 @@ const updateCatalogSchema = z.object({
     .optional(),
   rating: z.number().int().min(1).max(5).nullable().optional(),
   reviewNotes: z.string().max(4000).nullable().optional(),
-  currentSeason: z.number().int().min(0).nullable().optional(),
-  currentEpisode: z.number().int().min(0).nullable().optional(),
+  ownedSeasons: z.array(z.number().int().min(1)).optional(),
+  completeSeries: z.boolean().optional(),
   platform: z.string().max(60).nullable().optional(),
   hoursPlayed: z.number().min(0).nullable().optional(),
 });

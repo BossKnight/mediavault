@@ -80,12 +80,18 @@ model UserMediaProgress {
   rating      Int? // 1-5, user's personal rating
   reviewNotes String?
 
-  // TV-specific progress.
-  currentSeason  Int?
-  currentEpisode Int?
+  // TV-specific ownership. This app catalogs what you own, not viewing
+  // progress, so a mismatched collection (e.g. owning seasons 1, 2, and 6
+  // of a show) is recorded explicitly rather than as a single "up to"
+  // season number. completeSeries is a shortcut for "every season."
+  ownedSeasons   Int[]
+  completeSeries Boolean @default(false)
+
+  // Movie/TV physical format (VHS, DVD, Blu-Ray, 4K UHD) and game platform
+  // (PS5, PC, Switch...) share this column — only one applies per media type.
+  platform String?
 
   // Game-specific progress.
-  platform    String?
   hoursPlayed Float?
 
   startedAt   DateTime?

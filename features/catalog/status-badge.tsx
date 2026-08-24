@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { WATCH_STATUS_LABELS, type WatchStatus } from "@/types/media";
+import { getStatusLabel, type MediaType, type WatchStatus } from "@/types/media";
 
 const STATUS_TONE: Record<WatchStatus, "neutral" | "accent" | "success" | "warning"> = {
   PLAN_TO_WATCH: "neutral",
@@ -9,6 +9,6 @@ const STATUS_TONE: Record<WatchStatus, "neutral" | "accent" | "success" | "warni
   DROPPED: "neutral",
 };
 
-export function StatusBadge({ status }: { status: WatchStatus }) {
-  return <Badge tone={STATUS_TONE[status]}>{WATCH_STATUS_LABELS[status]}</Badge>;
+export function StatusBadge({ status, mediaType }: { status: WatchStatus; mediaType: MediaType }) {
+  return <Badge tone={STATUS_TONE[status]}>{getStatusLabel(status, mediaType)}</Badge>;
 }
