@@ -1,13 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AddItemModal } from "@/features/catalog/add-item-modal";
+import dynamic from "next/dynamic";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
-import { ItemDetailModal } from "@/features/catalog/item-detail-modal";
 import { StatsPanel } from "@/features/catalog/stats-panel";
 import { computeStats } from "@/lib/catalog";
 import type { CatalogEntry, MediaType, WatchStatus } from "@/types/media";
+
+// Code-split the two modals out of the catalog page's main bundle: neither
+// is needed for the initial render (Add Item's dialog content and Item
+// Detail's entire tree are both closed by default), but each pulls in
+// Radix Dialog/Select. Add Item keeps SSR on since its trigger button is
+// visible immediately; Item Detail always renders null until a card is
+// clicked, so it never needs to be part of the server-rendered HTML at all.
+const AddItemModal = dynamic(() =>
+  import("@/features/catalog/add-item-modal").then((mod) => mod.AddItemModal),
+);
+const ItemDetailModal = dynamic(
+  () => import("@/features/catalog/item-detail-modal").then((mod) => mod.ItemDetailModal),
+  { ssr: false },
+);
 
 interface CatalogViewProps {
   initialEntries: CatalogEntry[];
