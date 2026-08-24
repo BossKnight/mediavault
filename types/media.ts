@@ -108,3 +108,12 @@ export interface CatalogStats {
   byMediaType: Record<MediaType, number>;
   averageRating: number | null;
 }
+
+/** How the catalog grid orders entries. Defaults to "recent". */
+export type CatalogSort = "recent" | "title" | "rating";
+
+export const CATALOG_SORT_LABELS: Record<CatalogSort, string> = {
+  recent: "Recently added",
+  title: "Title",
+  rating: "Rating",
+};

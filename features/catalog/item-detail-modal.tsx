@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { StarRating } from "@/components/ui/star-rating";
-import { formatSeasonList, parseSeasonList } from "@/lib/seasons";
+import { formatSeasonList, parseSeasonInput } from "@/lib/seasons";
 import {
   Select,
   SelectContent,
@@ -76,6 +77,8 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parsedSeasons = useMemo(() => parseSeasonInput(ownedSeasonsText), [ownedSeasonsText]);
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -87,7 +90,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
     };
     if (mediaItem.mediaType === "TV") {
       body.completeSeries = completeSeries;
-      body.ownedSeasons = completeSeries ? [] : parseSeasonList(ownedSeasonsText);
+      body.ownedSeasons = completeSeries ? [] : parsedSeasons.seasons;
     }
     // Movies and TV store their physical format (VHS/DVD/Blu-Ray/4K UHD) and
     // games their platform (PS5, PC, Switch...) in the same `platform` field.
@@ -159,7 +162,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="font-medium text-surface-foreground">Status</span>
               <Select value={status} onValueChange={(value) => setStatus(value as WatchStatus)}>
@@ -203,6 +206,21 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                   <span className="text-xs text-muted-foreground">
                     List the season numbers you own, separated by commas.
                   </span>
+                  {parsedSeasons.seasons.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {parsedSeasons.seasons.map((season) => (
+                        <Badge key={season} tone="accent">
+                          Season {season}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {parsedSeasons.invalidTokens.length > 0 && (
+                    <p role="alert" className="text-xs text-danger">
+                      Not recognized as season numbers, so they won&rsquo;t be saved:{" "}
+                      {parsedSeasons.invalidTokens.join(", ")}
+                    </p>
+                  )}
                 </label>
               )}
             </div>

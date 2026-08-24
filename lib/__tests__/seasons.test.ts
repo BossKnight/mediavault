@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSeasonList, parseSeasonList } from "@/lib/seasons";
+import { formatSeasonList, parseSeasonInput, parseSeasonList } from "@/lib/seasons";
 
 describe("parseSeasonList", () => {
   it("parses comma-separated season numbers", () => {
@@ -21,6 +21,23 @@ describe("parseSeasonList", () => {
   it("returns an empty array for blank input", () => {
     expect(parseSeasonList("")).toEqual([]);
     expect(parseSeasonList("   ")).toEqual([]);
+  });
+});
+
+describe("parseSeasonInput", () => {
+  it("reports parsed seasons and invalid tokens separately", () => {
+    expect(parseSeasonInput("1, season two, -3, 0, 4")).toEqual({
+      seasons: [1, 4],
+      invalidTokens: ["season", "two", "-3", "0"],
+    });
+  });
+
+  it("returns no invalid tokens for clean input", () => {
+    expect(parseSeasonInput("1, 2, 6")).toEqual({ seasons: [1, 2, 6], invalidTokens: [] });
+  });
+
+  it("returns empty results for blank input", () => {
+    expect(parseSeasonInput("")).toEqual({ seasons: [], invalidTokens: [] });
   });
 });
 

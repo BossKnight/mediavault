@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
@@ -28,7 +29,9 @@ export default async function CatalogPage() {
         <SignOutButton />
       </div>
 
-      <CatalogView initialEntries={entries} />
+      <Suspense fallback={null}>
+        <CatalogView initialEntries={entries} />
+      </Suspense>
     </main>
   );
 }

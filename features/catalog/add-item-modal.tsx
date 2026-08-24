@@ -49,6 +49,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [platform, setPlatform] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   const trimmedQuery = debouncedQuery.trim();
 
@@ -75,7 +76,9 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
       .finally(() => setSearching(false));
 
     return () => controller.abort();
-  }, [trimmedQuery, mediaType]);
+    // retryToken has no value of its own; bumping it re-runs this effect to
+    // replay the same search after a failure.
+  }, [trimmedQuery, mediaType, retryToken]);
 
   // Once the query is cleared, stop showing results from the previous query
   // rather than clearing `results` itself in an effect.
@@ -87,6 +90,10 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setSelected(null);
     setSaveError(null);
     setPlatform("");
+  }
+
+  function handleRetry() {
+    setRetryToken((token) => token + 1);
   }
 
   function handleOpenChange(next: boolean) {
@@ -127,7 +134,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
         <Button>+ Add Item</Button>
       </DialogTrigger>
       <DialogContent
-        title={selected ? "Add to your catalog" : "Discover something new"}
+        title="Add to your collection"
         description={
           selected
             ? undefined
@@ -174,7 +181,14 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               )}
 
               {!searching && trimmedQuery && searchError && (
-                <p className="py-8 text-center text-sm text-danger">{searchError}</p>
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <p role="alert" className="text-sm text-danger">
+                    {searchError}
+                  </p>
+                  <Button variant="secondary" size="sm" onClick={handleRetry}>
+                    Try again
+                  </Button>
+                </div>
               )}
 
               {!searching && !searchError && trimmedQuery && visibleResults.length === 0 && (

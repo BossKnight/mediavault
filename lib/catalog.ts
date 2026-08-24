@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { CatalogEntry, CatalogStats, WatchStatus, MediaType } from "@/types/media";
+import type { CatalogEntry, CatalogSort, CatalogStats, WatchStatus, MediaType } from "@/types/media";
 
 /** Shared Prisma include so every route returns the same joined shape. */
 export const catalogEntryInclude = {
@@ -72,4 +72,33 @@ export function computeStats(entries: CatalogEntry[]): CatalogStats {
     byMediaType,
     averageRating: ratingCount > 0 ? ratingSum / ratingCount : null,
   };
+}
+
+/**
+ * Returns a new array, sorted for catalog display. "recent" orders by when
+ * the item was added to the catalog (not last edited), "title" is
+ * alphabetical, and "rating" puts the highest-rated items first with
+ * unrated items last regardless of direction.
+ */
+export function sortCatalogEntries(entries: CatalogEntry[], sort: CatalogSort): CatalogEntry[] {
+  const sorted = [...entries];
+
+  switch (sort) {
+    case "title":
+      sorted.sort((a, b) => a.mediaItem.title.localeCompare(b.mediaItem.title));
+      break;
+    case "rating":
+      sorted.sort((a, b) => {
+        if (a.rating == null && b.rating == null) return 0;
+        if (a.rating == null) return 1;
+        if (b.rating == null) return -1;
+        return b.rating - a.rating;
+      });
+      break;
+    case "recent":
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      break;
+  }
+
+  return sorted;
 }

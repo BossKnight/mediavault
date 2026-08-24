@@ -3,8 +3,17 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "@/components/ui/icons";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  CATALOG_SORT_LABELS,
   MEDIA_TYPE_LABELS,
   WATCH_STATUS_LABELS,
+  type CatalogSort,
   type MediaType,
   type WatchStatus,
 } from "@/types/media";
@@ -19,6 +28,7 @@ const STATUS_FILTERS: ("ALL" | WatchStatus)[] = [
   "ON_HOLD",
   "DROPPED",
 ];
+const SORT_OPTIONS: CatalogSort[] = ["recent", "title", "rating"];
 
 interface FilterBarProps {
   search: string;
@@ -27,6 +37,8 @@ interface FilterBarProps {
   onMediaTypeChange: (value: "ALL" | MediaType) => void;
   status: "ALL" | WatchStatus;
   onStatusChange: (value: "ALL" | WatchStatus) => void;
+  sort: CatalogSort;
+  onSortChange: (value: CatalogSort) => void;
 }
 
 export function FilterBar({
@@ -36,6 +48,8 @@ export function FilterBar({
   onMediaTypeChange,
   status,
   onStatusChange,
+  sort,
+  onSortChange,
 }: FilterBarProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -64,6 +78,25 @@ export function FilterBar({
           options={STATUS_FILTERS}
           labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
         />
+        <span className="h-4 w-px bg-border" aria-hidden />
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <span id="catalog-sort-label">Sort</span>
+          <Select value={sort} onValueChange={(value) => onSortChange(value as CatalogSort)}>
+            <SelectTrigger
+              aria-labelledby="catalog-sort-label"
+              className="h-7 w-auto gap-1 rounded-full border-border bg-transparent px-2.5 py-0 text-xs font-medium text-foreground"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {CATALOG_SORT_LABELS[option]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );
