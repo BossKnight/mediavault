@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/session";
 import { LoginForm } from "@/features/auth/login-form";
-import { Library } from "@/components/ui/icons";
+import { Logo } from "@/components/ui/logo";
 
 export default async function LoginPage() {
   const userId = await getCurrentUserId();
@@ -12,7 +12,7 @@ export default async function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-card border border-border bg-surface p-8">
         <div className="mb-6 flex items-center gap-2">
-          <Library className="h-5 w-5 text-accent" />
+          <Logo className="h-6 w-6" />
           <span className="text-sm font-semibold tracking-tight text-surface-foreground">
             MediaVault
           </span>

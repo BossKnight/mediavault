@@ -62,14 +62,3 @@ export function Loader(props: IconProps) {
     </svg>
   );
 }
-
-/** An open book, used as the app's mark next to the "MediaVault" wordmark. */
-export function Library(props: IconProps) {
-  return (
-    <svg {...base} {...props}>
-      <path d="M12 7c-1.5-1.3-3.6-2-6-2H3v13h3c2.4 0 4.5.7 6 2" />
-      <path d="M12 7c1.5-1.3 3.6-2 6-2h3v13h-3c-2.4 0-4.5.7-6 2" />
-      <path d="M12 7v13" />
-    </svg>
-  );
-}
