@@ -37,7 +37,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-white">Email</span>
+        <span className="font-medium text-surface-foreground">Email</span>
         <Input
           type="email"
           autoComplete="email"
@@ -48,7 +48,7 @@ export function LoginForm() {
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-white">Password</span>
+        <span className="font-medium text-surface-foreground">Password</span>
         <Input
           type="password"
           autoComplete="current-password"
@@ -58,7 +58,7 @@ export function LoginForm() {
         />
       </label>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <Button type="submit" disabled={submitting} className="mt-2">
         {submitting ? "Signing in..." : "Sign in"}

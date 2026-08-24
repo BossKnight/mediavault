@@ -144,8 +144,8 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   onClick={() => setMediaType(type)}
                   className={`focus-ring flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
                     mediaType === type
-                      ? "bg-accent text-white"
-                      : "text-muted hover:text-white"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:text-surface-foreground"
                   }`}
                 >
                   {MEDIA_TYPE_LABELS[type]}
@@ -154,7 +154,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             </div>
 
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
                 value={query}
@@ -167,24 +167,24 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
 
             <div className="max-h-80 min-h-24 overflow-y-auto rounded-lg">
               {searching && (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader className="h-4 w-4" />
                   Searching...
                 </div>
               )}
 
               {!searching && trimmedQuery && searchError && (
-                <p className="py-8 text-center text-sm text-red-400">{searchError}</p>
+                <p className="py-8 text-center text-sm text-danger">{searchError}</p>
               )}
 
               {!searching && !searchError && trimmedQuery && visibleResults.length === 0 && (
-                <p className="py-8 text-center text-sm text-muted">
+                <p className="py-8 text-center text-sm text-muted-foreground">
                   No results for &ldquo;{trimmedQuery}&rdquo;.
                 </p>
               )}
 
               {!searching && !trimmedQuery && (
-                <p className="py-8 text-center text-sm text-muted">
+                <p className="py-8 text-center text-sm text-muted-foreground">
                   Start typing to search {MEDIA_TYPE_LABELS[mediaType].toLowerCase()}s.
                 </p>
               )}
@@ -209,8 +209,8 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-white">{result.title}</p>
-                        <p className="text-xs text-muted">
+                        <p className="truncate text-sm font-medium text-surface-foreground">{result.title}</p>
+                        <p className="text-xs text-muted-foreground">
                           {result.releaseDate?.slice(0, 4) ?? "Unknown year"}
                         </p>
                       </div>
@@ -235,8 +235,8 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-white">{selected.title}</p>
-                <p className="text-sm text-muted">
+                <p className="font-semibold text-surface-foreground">{selected.title}</p>
+                <p className="text-sm text-muted-foreground">
                   {selected.releaseDate?.slice(0, 4) ?? "Unknown year"}
                   {selected.creator ? ` · ${selected.creator}` : ""}
                 </p>
@@ -248,14 +248,14 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   </div>
                 )}
                 {selected.overview && (
-                  <p className="mt-2 line-clamp-3 text-xs text-muted">{selected.overview}</p>
+                  <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{selected.overview}</p>
                 )}
               </div>
             </div>
 
             {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") ? (
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Platform</span>
+                <span className="font-medium text-surface-foreground">Platform</span>
                 <Select
                   value={platform || PLATFORM_NONE}
                   onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
@@ -275,7 +275,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </label>
             ) : (
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-white">Platform</span>
+                <span className="font-medium text-surface-foreground">Platform</span>
                 <Input
                   value={platform}
                   onChange={(event) => setPlatform(event.target.value)}
@@ -284,7 +284,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </label>
             )}
 
-            {saveError && <p className="text-sm text-red-400">{saveError}</p>}
+            {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setSelected(null)} disabled={saving}>

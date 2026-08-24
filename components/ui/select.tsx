@@ -15,14 +15,14 @@ export function SelectTrigger({
   return (
     <RadixSelect.Trigger
       className={cn(
-        "focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-white data-[placeholder]:text-muted",
+        "focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-surface-foreground data-[placeholder]:text-muted-foreground",
         className,
       )}
       {...props}
     >
       {children}
       <RadixSelect.Icon>
-        <ChevronDown className="h-4 w-4 text-muted" />
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
       </RadixSelect.Icon>
     </RadixSelect.Trigger>
   );
@@ -60,7 +60,7 @@ export function SelectItem({
   return (
     <RadixSelect.Item
       className={cn(
-        "focus-ring cursor-pointer select-none rounded-md px-3 py-2 text-sm text-white outline-none data-[highlighted]:bg-accent-muted data-[state=checked]:text-accent-hover",
+        "focus-ring cursor-pointer select-none rounded-md px-3 py-2 text-sm text-surface-foreground outline-none data-[highlighted]:bg-accent-muted data-[state=checked]:text-accent",
         className,
       )}
       {...props}

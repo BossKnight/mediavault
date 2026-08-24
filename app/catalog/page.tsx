@@ -20,8 +20,8 @@ export default async function CatalogPage() {
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Your catalog</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-2xl font-semibold text-foreground">Your catalog</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Movies, TV shows, and games you own or plan to get to.
           </p>
         </div>

@@ -40,7 +40,7 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-3">
       <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -93,8 +93,8 @@ function FilterChipGroup<T extends string>({
           className={cn(
             "focus-ring rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             value === option
-              ? "border-accent bg-accent-muted text-accent-hover"
-              : "border-border text-muted hover:text-white",
+              ? "border-accent bg-accent-muted text-accent-muted-foreground"
+              : "border-border text-muted-foreground hover:text-foreground",
           )}
         >
           {labelFor(option)}

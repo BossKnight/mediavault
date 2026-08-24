@@ -46,7 +46,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-white">Name (optional)</span>
+        <span className="font-medium text-surface-foreground">Name (optional)</span>
         <Input
           autoComplete="name"
           value={name}
@@ -55,7 +55,7 @@ export function RegisterForm() {
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-white">Email</span>
+        <span className="font-medium text-surface-foreground">Email</span>
         <Input
           type="email"
           autoComplete="email"
@@ -66,7 +66,7 @@ export function RegisterForm() {
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-white">Password</span>
+        <span className="font-medium text-surface-foreground">Password</span>
         <Input
           type="password"
           autoComplete="new-password"
@@ -75,10 +75,10 @@ export function RegisterForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <span className="text-xs text-muted">At least 8 characters.</span>
+        <span className="text-xs text-muted-foreground">At least 8 characters.</span>
       </label>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <Button type="submit" disabled={submitting} className="mt-2">
         {submitting ? "Creating account..." : "Create account"}

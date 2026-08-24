@@ -38,13 +38,13 @@ function StatTile({ label, value, emphasize, small }: StatTileProps) {
       <p
         className={
           small
-            ? "text-lg font-semibold text-white"
-            : `text-2xl font-semibold ${emphasize ? "text-accent-hover" : "text-white"}`
+            ? "text-lg font-semibold text-surface-foreground"
+            : `text-2xl font-semibold ${emphasize ? "text-accent" : "text-surface-foreground"}`
         }
       >
         {value}
       </p>
-      <p className="mt-1 text-xs text-muted">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

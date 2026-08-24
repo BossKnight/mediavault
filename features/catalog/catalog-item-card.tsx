@@ -17,7 +17,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
     <button
       type="button"
       onClick={() => onSelect(entry)}
-      className="focus-ring group flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-colors hover:border-muted"
+      className="focus-ring group flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-colors hover:border-muted-foreground"
     >
       <div className="relative aspect-[2/3] w-full bg-surface-raised">
         {mediaItem.coverUrl ? (
@@ -29,7 +29,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
             className="object-cover transition-transform group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-xs text-muted">
+          <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
             No cover
           </div>
         )}
@@ -38,8 +38,8 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <p className="line-clamp-2 text-sm font-medium text-white">{mediaItem.title}</p>
-        <p className="text-xs text-muted">
+        <p className="line-clamp-2 text-sm font-medium text-surface-foreground">{mediaItem.title}</p>
+        <p className="text-xs text-muted-foreground">
           {mediaItem.releaseDate?.slice(0, 4) ?? "Unknown year"}
         </p>
         <StarRating value={entry.rating} readOnly className="mt-1" />

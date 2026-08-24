@@ -105,10 +105,10 @@ export function CatalogView({ initialEntries }: CatalogViewProps) {
 function EmptyState({ hasAnyEntries }: { hasAnyEntries: boolean }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-card border border-dashed border-border py-16 text-center">
-      <p className="text-sm font-medium text-white">
+      <p className="text-sm font-medium text-foreground">
         {hasAnyEntries ? "No items match your filters" : "Your catalog is empty"}
       </p>
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         {hasAnyEntries
           ? "Try clearing a filter or searching for something else."
           : "Use “Add Item” to search for a movie, show, or game to catalog."}

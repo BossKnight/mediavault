@@ -146,22 +146,22 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-muted">
+              <p className="text-sm text-muted-foreground">
                 {mediaItem.releaseDate?.slice(0, 4) ?? "Unknown year"}
                 {mediaItem.creator ? ` · ${mediaItem.creator}` : ""}
               </p>
               {mediaItem.genres.length > 0 && (
-                <p className="mt-1 text-xs text-muted">{mediaItem.genres.join(", ")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{mediaItem.genres.join(", ")}</p>
               )}
               {mediaItem.overview && (
-                <p className="mt-2 line-clamp-4 text-xs text-muted">{mediaItem.overview}</p>
+                <p className="mt-2 line-clamp-4 text-xs text-muted-foreground">{mediaItem.overview}</p>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-white">Status</span>
+              <span className="font-medium text-surface-foreground">Status</span>
               <Select value={status} onValueChange={(value) => setStatus(value as WatchStatus)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -177,7 +177,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             </label>
 
             <div className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-white">Your rating</span>
+              <span className="font-medium text-surface-foreground">Your rating</span>
               <StarRating value={rating} onChange={setRating} />
             </div>
           </div>
@@ -189,18 +189,18 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                   checked={completeSeries}
                   onChange={(event) => setCompleteSeries(event.target.checked)}
                 />
-                <span className="font-medium text-white">Complete series (own every season)</span>
+                <span className="font-medium text-surface-foreground">Complete series (own every season)</span>
               </label>
 
               {!completeSeries && (
                 <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-white">Seasons owned</span>
+                  <span className="font-medium text-surface-foreground">Seasons owned</span>
                   <Input
                     value={ownedSeasonsText}
                     onChange={(event) => setOwnedSeasonsText(event.target.value)}
                     placeholder="e.g. 1, 2, 6"
                   />
-                  <span className="text-xs text-muted">
+                  <span className="text-xs text-muted-foreground">
                     List the season numbers you own, separated by commas.
                   </span>
                 </label>
@@ -210,7 +210,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
 
           {(mediaItem.mediaType === "MOVIE" || mediaItem.mediaType === "TV") && (
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-white">Platform</span>
+              <span className="font-medium text-surface-foreground">Platform</span>
               <Select
                 value={platform || PLATFORM_NONE}
                 onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
@@ -232,7 +232,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
 
           {mediaItem.mediaType === "GAME" && (
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-white">Platform</span>
+              <span className="font-medium text-surface-foreground">Platform</span>
               <Input
                 value={platform}
                 onChange={(event) => setPlatform(event.target.value)}
@@ -242,16 +242,16 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
           )}
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-white">Notes</span>
+            <span className="font-medium text-surface-foreground">Notes</span>
             <Textarea rows={3} value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} />
           </label>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
 
           <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
             {confirmingDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted">Remove from catalog?</span>
+                <span className="text-sm text-muted-foreground">Remove from catalog?</span>
                 <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
                   {deleting ? "Removing..." : "Confirm"}
                 </Button>

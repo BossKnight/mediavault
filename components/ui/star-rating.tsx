@@ -55,13 +55,13 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
             <Star
               className={cn(
                 "h-6 w-6 transition-colors",
-                filled ? "fill-accent text-accent" : "text-border hover:text-muted",
+                filled ? "fill-accent text-accent" : "text-border hover:text-muted-foreground",
               )}
             />
           </button>
         );
       })}
-      {value != null && <span className="ml-2 text-sm text-muted">{value}/5</span>}
+      {value != null && <span className="ml-2 text-sm text-muted-foreground">{value}/5</span>}
     </div>
   );
 }
