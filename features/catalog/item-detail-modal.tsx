@@ -242,13 +242,8 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
           )}
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-white">Review notes</span>
-            <Textarea
-              rows={3}
-              value={reviewNotes}
-              onChange={(event) => setReviewNotes(event.target.value)}
-              placeholder="What did you think?"
-            />
+            <span className="font-medium text-white">Notes</span>
+            <Textarea rows={3} value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} />
           </label>
 
           {error && <p className="text-sm text-red-400">{error}</p>}

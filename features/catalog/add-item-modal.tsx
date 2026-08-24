@@ -17,15 +17,15 @@ import {
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   MEDIA_TYPE_LABELS,
-  getStatusLabel,
-  getStatusOptions,
+  PHYSICAL_FORMATS,
   type CatalogEntry,
   type MediaType,
   type UnifiedSearchResult,
-  type WatchStatus,
 } from "@/types/media";
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+// Sentinel for "no format/platform set" — Radix Select items can't use "".
+const PLATFORM_NONE = "NONE";
 
 interface AddItemModalProps {
   onAdded: (entry: CatalogEntry) => void;
@@ -33,8 +33,9 @@ interface AddItemModalProps {
 
 /**
  * The full "Add Item" discovery flow: an autocomplete search bar against the
- * external metadata APIs, followed by a status-picker step before the
- * selected result is saved to the catalog.
+ * external metadata APIs, followed by a platform-picker step before the
+ * selected result is saved to the catalog. New items default to "Plan to
+ * Watch" (or "In Backlog" for games) — the initial status isn't asked here.
  */
 export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [open, setOpen] = useState(false);
@@ -45,7 +46,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
-  const [status, setStatus] = useState<WatchStatus>("PLAN_TO_WATCH");
+  const [platform, setPlatform] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -85,7 +86,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setResults([]);
     setSelected(null);
     setSaveError(null);
-    setStatus("PLAN_TO_WATCH");
+    setPlatform("");
   }
 
   function handleOpenChange(next: boolean) {
@@ -102,7 +103,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
       const response = await fetch("/api/catalog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...selected, status }),
+        body: JSON.stringify({ ...selected, platform: platform.trim() || null }),
       });
       const data = await response.json();
 
@@ -252,21 +253,36 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </div>
             </div>
 
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-white">Status</span>
-              <Select value={status} onValueChange={(value) => setStatus(value as WatchStatus)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getStatusOptions(selected.mediaType).map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {getStatusLabel(option, selected.mediaType)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
+            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") ? (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-white">Platform</span>
+                <Select
+                  value={platform || PLATFORM_NONE}
+                  onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
+                    {PHYSICAL_FORMATS.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            ) : (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-white">Platform</span>
+                <Input
+                  value={platform}
+                  onChange={(event) => setPlatform(event.target.value)}
+                  placeholder="PS5, PC, Switch..."
+                />
+              </label>
+            )}
 
             {saveError && <p className="text-sm text-red-400">{saveError}</p>}
 

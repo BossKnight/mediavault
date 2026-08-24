@@ -18,6 +18,7 @@ const createCatalogSchema = z.object({
   status: z
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
+  platform: z.string().max(60).nullable().optional(),
 });
 
 const VALID_STATUSES = [
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
         userId,
         mediaItemId: mediaItem.id,
         status: data.status ?? "PLAN_TO_WATCH",
+        platform: data.platform ?? null,
       },
       include: catalogEntryInclude,
     });
