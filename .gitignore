@@ -4,21 +4,23 @@
 node_modules/
 
 # ── Environment files ─────────────────────────────────────────────────────────
-# .env holds your real API keys. If this ends up on GitHub, those keys are
-# exposed to the entire internet. The .env.example file (no real values) IS
-# safe to commit — it tells others what variables they need to fill in.
-server/.env
+# .env holds your real API keys and database credentials. If this ends up on
+# GitHub, those are exposed to the entire internet. The .env.example file (no
+# real values) IS safe to commit — it tells others what variables they need.
+.env
+.env*.local
 
 # ── Generated build output ────────────────────────────────────────────────────
-# "dist" is the compiled JavaScript that TypeScript produces. It's generated
-# from source, so there's no need to track it in version control.
-server/dist/
-client/dist/
+.next/
+out/
+build/
+dist/
 
-# ── Personal data ─────────────────────────────────────────────────────────────
-# Your actual collection database and downloaded cover images. This is personal
-# data, not source code — it shouldn't be in a code repository.
-server/data/
+# ── Prisma ─────────────────────────────────────────────────────────────────────
+prisma/generated/
+
+# ── Test / coverage output ────────────────────────────────────────────────────
+coverage/
 
 # ── Operating system files ────────────────────────────────────────────────────
 .DS_Store
@@ -28,3 +30,7 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 *.suo
+
+# ── TypeScript / Next build artifacts ─────────────────────────────────────────
+next-env.d.ts
+*.tsbuildinfo
