@@ -89,3 +89,12 @@ export function Gamepad(props: IconProps) {
     </svg>
   );
 }
+
+export function Sparkles(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3l1.5 6L19 10.5l-5.5 1.5L12 18l-1.5-6L5 10.5l5.5-1.5L12 3Z" />
+      <path d="M19 3v3M17.5 4.5h3" />
+    </svg>
+  );
+}

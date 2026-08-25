@@ -126,7 +126,13 @@ export function CatalogView({ initialEntries }: CatalogViewProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      <StatsPanel stats={stats} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
+      <StatsPanel
+        stats={stats}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        entries={entries}
+        onSelectRecommendation={setSelectedEntry}
+      />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <FilterBar

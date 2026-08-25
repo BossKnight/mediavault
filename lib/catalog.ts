@@ -102,3 +102,34 @@ export function sortCatalogEntries(entries: CatalogEntry[], sort: CatalogSort): 
 
   return sorted;
 }
+
+/**
+ * A lightweight "what to try next" heuristic: surfaces plan-to-watch titles
+ * in the genres the user rates highest. It only looks at the user's own
+ * rated entries, not a real recommendation engine, just enough to point at
+ * something worth trying next.
+ */
+export function recommendNext(entries: CatalogEntry[]): CatalogEntry[] {
+  const genreScore = new Map<string, { sum: number; count: number }>();
+  for (const entry of entries) {
+    if (entry.rating == null) continue;
+    for (const genre of entry.mediaItem.genres) {
+      const current = genreScore.get(genre) ?? { sum: 0, count: 0 };
+      current.sum += entry.rating;
+      current.count += 1;
+      genreScore.set(genre, current);
+    }
+  }
+
+  const favoredGenres = new Set(
+    [...genreScore.entries()]
+      .sort((a, b) => b[1].sum / b[1].count - a[1].sum / a[1].count)
+      .slice(0, 3)
+      .map(([genre]) => genre),
+  );
+
+  return entries
+    .filter((entry) => entry.status === "PLAN_TO_WATCH")
+    .filter((entry) => entry.mediaItem.genres.some((genre) => favoredGenres.has(genre)))
+    .slice(0, 4);
+}

@@ -1,59 +1,102 @@
-import { WATCH_STATUS_LABELS, type CatalogStats, type WatchStatus } from "@/types/media";
+import { WATCH_STATUS_LABELS, type CatalogEntry, type CatalogStats, type WatchStatus } from "@/types/media";
+import { recommendNext } from "@/lib/catalog";
+import { CoverArt } from "@/features/catalog/cover-art";
+import { Sparkles } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 interface StatsPanelProps {
   stats: CatalogStats;
   statusFilter: "ALL" | WatchStatus;
   onStatusFilterChange: (value: "ALL" | WatchStatus) => void;
+  entries: CatalogEntry[];
+  onSelectRecommendation: (entry: CatalogEntry) => void;
 }
 
 /**
- * A compact row of stat tiles. Deliberately not a chart, five numbers don't
- * need one. Below the sm breakpoint the tiles collapse into a single
- * horizontally scrolling row, so the catalog grid starts higher on the
- * screen; at sm and up they lay out as a regular grid.
+ * A compact row of stat tiles, plus a "try next" strip when there's enough
+ * rating data to suggest something. Below the sm breakpoint the tiles
+ * collapse into a single horizontally scrolling row, so the catalog grid
+ * starts higher on the screen; at sm and up they lay out as a regular grid.
  *
  * The four tiles with a matching status filter (Total items, In Progress,
  * Completed, Plan to Watch) double as shortcuts into that filter. Avg.
  * rating and the media-type breakdown have nothing to filter into, so they
  * stay plain, non-interactive tiles.
  */
-export function StatsPanel({ stats, statusFilter, onStatusFilterChange }: StatsPanelProps) {
+export function StatsPanel({
+  stats,
+  statusFilter,
+  onStatusFilterChange,
+  entries,
+  onSelectRecommendation,
+}: StatsPanelProps) {
+  const recommended = recommendNext(entries);
+
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
-      <StatFilterTile
-        label="Total items"
-        value={stats.total}
-        active={statusFilter === "ALL"}
-        onClick={() => onStatusFilterChange("ALL")}
-      />
-      <StatFilterTile
-        label={WATCH_STATUS_LABELS.IN_PROGRESS}
-        value={stats.byStatus.IN_PROGRESS}
-        active={statusFilter === "IN_PROGRESS"}
-        onClick={() => onStatusFilterChange("IN_PROGRESS")}
-      />
-      <StatFilterTile
-        label={WATCH_STATUS_LABELS.COMPLETED}
-        value={stats.byStatus.COMPLETED}
-        active={statusFilter === "COMPLETED"}
-        onClick={() => onStatusFilterChange("COMPLETED")}
-      />
-      <StatFilterTile
-        label={WATCH_STATUS_LABELS.PLAN_TO_WATCH}
-        value={stats.byStatus.PLAN_TO_WATCH}
-        active={statusFilter === "PLAN_TO_WATCH"}
-        onClick={() => onStatusFilterChange("PLAN_TO_WATCH")}
-      />
-      <StatTile
-        label="Avg. rating"
-        value={stats.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
-      />
-      <StatTile
-        label="Movies / TV / Games"
-        value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME}`}
-        small
-      />
+    <div className="flex flex-col gap-3">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
+        <StatFilterTile
+          label="Total items"
+          value={stats.total}
+          active={statusFilter === "ALL"}
+          onClick={() => onStatusFilterChange("ALL")}
+        />
+        <StatFilterTile
+          label={WATCH_STATUS_LABELS.IN_PROGRESS}
+          value={stats.byStatus.IN_PROGRESS}
+          active={statusFilter === "IN_PROGRESS"}
+          onClick={() => onStatusFilterChange("IN_PROGRESS")}
+        />
+        <StatFilterTile
+          label={WATCH_STATUS_LABELS.COMPLETED}
+          value={stats.byStatus.COMPLETED}
+          active={statusFilter === "COMPLETED"}
+          onClick={() => onStatusFilterChange("COMPLETED")}
+        />
+        <StatFilterTile
+          label={WATCH_STATUS_LABELS.PLAN_TO_WATCH}
+          value={stats.byStatus.PLAN_TO_WATCH}
+          active={statusFilter === "PLAN_TO_WATCH"}
+          onClick={() => onStatusFilterChange("PLAN_TO_WATCH")}
+        />
+        <StatTile
+          label="Avg. rating"
+          value={stats.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
+        />
+        <StatTile
+          label="Movies / TV / Games"
+          value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME}`}
+          small
+        />
+      </div>
+
+      {recommended.length > 0 && (
+        <div className="rounded-card border border-border bg-surface-raised px-4 py-3">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            Try next, based on your ratings
+          </div>
+          <ul className="flex gap-2">
+            {recommended.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectRecommendation(entry)}
+                  title={entry.mediaItem.title}
+                  className="focus-ring block h-14 w-10 overflow-hidden rounded transition-transform hover:scale-105"
+                >
+                  <CoverArt
+                    id={entry.mediaItem.id}
+                    title={entry.mediaItem.title}
+                    mediaType={entry.mediaItem.mediaType}
+                    className="h-full w-full"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
