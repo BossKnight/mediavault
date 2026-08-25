@@ -18,13 +18,16 @@ export interface TmdbSearchResponse {
   results: TmdbMovieResult[];
 }
 
+// RAWG's /games search endpoint (what searchRawg calls) does not include
+// developer info: that only exists on the separate /games/{id} details
+// endpoint, which nothing here calls. Don't add a `developers` field back
+// without also adding that lookup, or it'll silently stay unpopulated.
 export interface RawgGame {
   id: number;
   name: string;
   released?: string | null;
   background_image?: string | null;
   genres?: { name: string }[];
-  developers?: { name: string }[];
 }
 
 export interface RawgSearchResponse {

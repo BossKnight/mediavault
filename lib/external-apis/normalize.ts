@@ -76,6 +76,8 @@ export function normalizeRawgResult(game: RawgGame): UnifiedSearchResult {
     coverUrl: game.background_image || null,
     overview: null,
     genres: (game.genres ?? []).map((g) => g.name),
-    creator: game.developers?.[0]?.name ?? null,
+    // RAWG's search results don't include the developer, only its separate
+    // per-game details endpoint does, so this is always null.
+    creator: null,
   };
 }

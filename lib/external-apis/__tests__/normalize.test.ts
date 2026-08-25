@@ -85,7 +85,6 @@ describe("normalizeRawgResult", () => {
       released: "2013-09-17",
       background_image: "https://media.rawg.io/media/games/gta-v.jpg",
       genres: [{ name: "Action" }, { name: "Adventure" }],
-      developers: [{ name: "Rockstar North" }],
     });
 
     expect(result).toEqual({
@@ -97,14 +96,27 @@ describe("normalizeRawgResult", () => {
       coverUrl: "https://media.rawg.io/media/games/gta-v.jpg",
       overview: null,
       genres: ["Action", "Adventure"],
-      creator: "Rockstar North",
+      creator: null,
     });
   });
 
-  it("handles a game with no developer or genres listed", () => {
+  it("handles a game with no genres listed", () => {
     const result = normalizeRawgResult({ id: 1, name: "Untitled Indie Game" });
 
-    expect(result.creator).toBeNull();
     expect(result.genres).toEqual([]);
+  });
+
+  it("always returns a null creator, since RAWG search results don't include a developer", () => {
+    // Confirmed against a live RAWG search response: the /games endpoint
+    // never returns a `developers` field, only /games/{id} does.
+    const result = normalizeRawgResult({
+      id: 274755,
+      name: "Hades",
+      released: "2020-09-17",
+      background_image: "https://media.rawg.io/media/games/1f4/1f47a270b8f241e4676b14d39ec620f7.jpg",
+      genres: [{ name: "Indie" }, { name: "Action" }],
+    });
+
+    expect(result.creator).toBeNull();
   });
 });
