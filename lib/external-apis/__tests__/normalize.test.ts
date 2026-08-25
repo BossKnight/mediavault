@@ -56,6 +56,17 @@ describe("normalizeTmdbResult", () => {
     expect(result.genres).toEqual([]);
   });
 
+  it("treats an empty release_date string as unknown, not a real date", () => {
+    // TMDB returns "" (not a missing field) for some low-quality entries,
+    // seen live in a real search response.
+    const result = normalizeTmdbResult(
+      { id: 1747666, title: "Untitled Release", release_date: "" },
+      "MOVIE",
+    );
+
+    expect(result.releaseDate).toBeNull();
+  });
+
   it("drops unknown genre ids instead of producing undefined entries", () => {
     const result = normalizeTmdbResult(
       { id: 1, title: "Mystery Movie", genre_ids: [28, 999999] },
