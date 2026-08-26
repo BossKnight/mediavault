@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Theming system
+  ==============
+  Every color a component uses comes from a semantic CSS custom property
+  below, never a literal value in component code. That's what makes adding
+  a theme later ("sepia", "high-contrast", ...) a matter of adding one more
+  block here — no component file ever needs to change.
+
+  Mechanism: a "root class toggle". <html> can carry a `.light` or `.dark`
+  class to force a theme; with neither class present, the theme follows
+  the OS's `prefers-color-scheme` automatically. Both paths are pure CSS —
+  the correct theme is already resolved by the time the first pixel paints,
+  with no script required on initial load. A theme switcher can be added
+  later (toggle the class on <html>, persist the choice) without touching
+  this file's structure.
+
+  Precedence, low to high:
+    1. :root                                   - light values (the default
+                                                  fallback if neither a
+                                                  media match nor a class
+                                                  applies)
+    2. @media (prefers-color-scheme: dark)      - dark values, guarded so
+                                                  an explicit .light class
+                                                  still wins
+    3. :root.dark / :root.light                 - explicit override,
+                                                  always wins
+
+  Values are HSL triples (no `hsl()` wrapper, no commas) so Tailwind can
+  compose them with opacity: `hsl(var(--accent) / <alpha-value>)` is what
+  makes utilities like `bg-accent/10` work.
+
+  Every foreground/background pairing below is verified against WCAG AA
+  (4.5:1 for text) in both themes — see the contrast notes next to each
+  theme block.
+*/
+
+@layer base {
+  :root {
+    /* ── Light theme (default / fallback) ────────────────────────────── */
+    --background: 222 20% 97%;
+    --foreground: 222 25% 11%; /* 16.4:1 on --background */
+
+    --surface: 0 0% 100%;
+    --surface-foreground: 222 25% 11%; /* 17.6:1 on --surface */
+    --surface-raised: 222 15% 95%;
+
+    --border: 222 12% 58%; /* ~3.3:1 on --surface: usable as a component boundary */
+
+    --muted: 222 20% 95%;
+    --muted-foreground: 222 10% 38%; /* 6.2:1 on --background, 6.6:1 on --surface */
+
+    --accent: 239 75% 56%; /* 6.6-7.1:1 as text on --background/--surface */
+    --accent-foreground: 0 0% 100%; /* 7.1:1 on --accent */
+    --accent-hover: 238 78% 50%;
+    --accent-muted: 238 65% 95%;
+    --accent-muted-foreground: 243 70% 38%; /* 9.9:1 on --accent-muted */
+
+    --success: 158 75% 28%; /* 4.8-5.1:1 as text on --background/--surface */
+    --success-foreground: 0 0% 100%; /* 5.1:1 on --success */
+
+    --warning: 28 85% 34%; /* 5.3-5.7:1 as text on --background/--surface */
+    --warning-foreground: 0 0% 100%; /* 5.7:1 on --warning */
+
+    --danger: 0 65% 42%; /* 6.2-6.6:1 as text on --background/--surface */
+    --danger-foreground: 0 0% 100%; /* 6.6:1 on --danger */
+
+    --radius-card: 0.75rem;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      /* ── Dark theme (system default) ─────────────────────────────── */
+      --background: 222 20% 5%;
+      --foreground: 240 20% 96%; /* 17.7:1 on --background */
+
+      --surface: 222 15% 9%;
+      --surface-foreground: 240 20% 96%; /* 16.4:1 on --surface */
+      --surface-raised: 222 14% 13%;
+
+      --border: 222 10% 20%;
+
+      --muted: 222 14% 13%;
+      --muted-foreground: 222 8% 66%; /* 8.0:1 on --background, 7.4:1 on --surface */
+
+      --accent: 239 84% 73%; /* 6.0-6.6:1 as text on --background/--surface */
+      --accent-foreground: 240 40% 10%; /* 5.8:1 on --accent */
+      --accent-hover: 238 90% 80%;
+      --accent-muted: 243 40% 20%;
+      --accent-muted-foreground: 231 90% 85%; /* 8.9:1 on --accent-muted */
+
+      --success: 158 64% 62%; /* 10.7-11.5:1 as text on --background/--surface */
+      --success-foreground: 222 20% 5%;
+
+      --warning: 32 90% 62%; /* 8.9-9.6:1 as text on --background/--surface */
+      --warning-foreground: 222 20% 5%;
+
+      --danger: 0 72% 68%; /* 6.2-6.7:1 as text on --background/--surface */
+      --danger-foreground: 222 20% 5%;
+
+      color-scheme: dark;
+    }
+  }
+
+  :root.dark {
+    /* Explicit override — identical to the media-query block above, so a
+       manual "dark" choice looks the same as the system producing it. */
+    --background: 222 20% 5%;
+    --foreground: 240 20% 96%;
+    --surface: 222 15% 9%;
+    --surface-foreground: 240 20% 96%;
+    --surface-raised: 222 14% 13%;
+    --border: 222 10% 20%;
+    --muted: 222 14% 13%;
+    --muted-foreground: 222 8% 66%;
+    --accent: 239 84% 73%;
+    --accent-foreground: 240 40% 10%;
+    --accent-hover: 238 90% 80%;
+    --accent-muted: 243 40% 20%;
+    --accent-muted-foreground: 231 90% 85%;
+    --success: 158 64% 62%;
+    --success-foreground: 222 20% 5%;
+    --warning: 32 90% 62%;
+    --warning-foreground: 222 20% 5%;
+    --danger: 0 72% 68%;
+    --danger-foreground: 222 20% 5%;
+    color-scheme: dark;
+  }
+
+  :root.light {
+    /* Explicit override — beats a `prefers-color-scheme: dark` match. */
+    --background: 222 20% 97%;
+    --foreground: 222 25% 11%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 222 25% 11%;
+    --surface-raised: 222 15% 95%;
+    --border: 222 12% 58%;
+    --muted: 222 20% 95%;
+    --muted-foreground: 222 10% 38%;
+    --accent: 239 75% 56%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 238 78% 50%;
+    --accent-muted: 238 65% 95%;
+    --accent-muted-foreground: 243 70% 38%;
+    --success: 158 75% 28%;
+    --success-foreground: 0 0% 100%;
+    --warning: 28 85% 34%;
+    --warning-foreground: 0 0% 100%;
+    --danger: 0 65% 42%;
+    --danger-foreground: 0 0% 100%;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent/30;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}

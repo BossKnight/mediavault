@@ -1,0 +1,105 @@
+// Prisma schema for MediaVault.
+//
+// Two-table split at the heart of the app:
+//   - MediaItem is global, shared metadata pulled from TMDB / RAWG. It exists
+//     once per external title regardless of how many users have catalogued it.
+//   - UserMediaProgress is the per-user join row: status, rating, notes, and
+//     type-specific progress (season/episode for TV, hours/platform for games).
+//
+// This keeps external metadata de-duplicated and lets user-specific data (a
+// rating, a review) live independently of the shared title record.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MediaType {
+  MOVIE
+  TV
+  GAME
+}
+
+enum MetadataSource {
+  TMDB
+  RAWG
+}
+
+enum WatchStatus {
+  PLAN_TO_WATCH
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  DROPPED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+
+  progress UserMediaProgress[]
+}
+
+model MediaItem {
+  id          String         @id @default(cuid())
+  source      MetadataSource
+  externalId  String
+  mediaType   MediaType
+  title       String
+  releaseDate DateTime?
+  coverUrl    String?
+  overview    String?
+  genres      String[]
+  // Director (movie), showrunner/network (TV), or developer (game).
+  creator     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  progress UserMediaProgress[]
+
+  // The same external title should never be stored twice.
+  @@unique([source, externalId])
+  @@index([mediaType])
+}
+
+model UserMediaProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItemId String
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+
+  status      WatchStatus @default(PLAN_TO_WATCH)
+  rating      Int? // 1-5, user's personal rating
+  reviewNotes String?
+
+  // TV-specific ownership. This app catalogs what you own, not viewing
+  // progress, so a mismatched collection (e.g. owning seasons 1, 2, and 6
+  // of a show) is recorded explicitly rather than as a single "up to"
+  // season number. completeSeries is a shortcut for "every season."
+  ownedSeasons   Int[]
+  completeSeries Boolean @default(false)
+
+  // Movie/TV physical format (VHS, DVD, Blu-Ray, 4K UHD) and game platform
+  // (PS5, PC, Switch...) share this column — only one applies per media type.
+  platform String?
+
+  // Game-specific progress.
+  hoursPlayed Float?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // One progress row per user per title.
+  @@unique([userId, mediaItemId])
+  @@index([userId, status])
+}

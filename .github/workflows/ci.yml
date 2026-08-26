@@ -7,12 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  client:
-    name: Client — typecheck & lint
+  app:
+    name: Typecheck, lint & test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: client
 
     steps:
       - uses: actions/checkout@v4
@@ -21,33 +18,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: client/package-lock.json
 
       - run: npm ci
 
+      - name: Generate Prisma client
+        run: npx prisma generate
+
       - name: Typecheck
-        run: npx tsc -b --noEmit
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint
 
-  server:
-    name: Server — typecheck
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-
-      - run: npm ci
-
-      - name: Typecheck
-        run: npx tsc --noEmit
+      - name: Test
+        run: npm test
