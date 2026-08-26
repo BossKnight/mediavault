@@ -19,7 +19,7 @@ interface StatsPanelProps {
  * starts higher on the screen; at sm and up they lay out as a regular grid.
  *
  * The four tiles with a matching status filter (Total items, In Progress,
- * Completed, Plan to Watch) double as shortcuts into that filter. Avg.
+ * Completed, In Backlog) double as shortcuts into that filter. Avg.
  * rating and the media-type breakdown have nothing to filter into, so they
  * stay plain, non-interactive tiles.
  */
@@ -64,7 +64,7 @@ export function StatsPanel({
           value={stats.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
         />
         <StatTile
-          label="Movies / TV / Games / Books"
+          label="Movies/TV/Games/Books"
           value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME} / ${stats.byMediaType.BOOK}`}
           small
         />

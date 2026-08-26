@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Camera, Loader, Search } from "@/components/ui/icons";
-import { BarcodeScannerModal } from "@/features/catalog/barcode-scanner-modal";
+import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import {
   Select,
   SelectContent,
@@ -30,18 +30,23 @@ const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 // Sentinel for "no format/platform set" — Radix Select items can't use "".
 const PLATFORM_NONE = "NONE";
 
+type Step = "search" | "scan" | "confirm";
+
 interface AddItemModalProps {
   onAdded: (entry: CatalogEntry) => void;
 }
 
 /**
- * The full "Add Item" discovery flow: an autocomplete search bar against the
- * external metadata APIs, followed by a platform-picker step before the
- * selected result is saved to the catalog. New items default to "Plan to
- * Watch" (or "In Backlog" for games) — the initial status isn't asked here.
+ * The full "Add Item" discovery flow, as three steps of one dialog: search
+ * (with a "Scan barcode" entry point), scan, and confirm. Keeping the scan
+ * step inside the same Dialog instance — rather than opening a second,
+ * nested one — avoids stacking two Radix dialog overlays on top of each
+ * other. New items default to "In Backlog" (or "To Read" for books) — the
+ * initial status isn't asked here.
  */
 export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<Step>("search");
   const [mediaType, setMediaType] = useState<MediaType>("MOVIE");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 300);
@@ -53,7 +58,6 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
-  const [scannerOpen, setScannerOpen] = useState(false);
 
   const trimmedQuery = debouncedQuery.trim();
 
@@ -89,6 +93,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const visibleResults = trimmedQuery ? results : [];
 
   function reset() {
+    setStep("search");
     setQuery("");
     setResults([]);
     setSelected(null);
@@ -100,8 +105,13 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setRetryToken((token) => token + 1);
   }
 
+  function handleSelectResult(result: UnifiedSearchResult) {
+    setSelected(result);
+    setStep("confirm");
+  }
+
   // A resolved barcode is treated as an unambiguous pick: it jumps straight
-  // to the confirm screen instead of dropping the user into a results list,
+  // to the confirm step instead of dropping the user into a results list,
   // matching the "scan it and it's in your collection" point of scanning in
   // the first place. If the code turned out to be a book's ISBN, the media
   // type tab switches to match even if a different tab was active.
@@ -112,6 +122,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
       setMediaType(first.mediaType);
     }
     setSelected(first);
+    setStep("confirm");
   }
 
   function handleOpenChange(next: boolean) {
@@ -152,21 +163,24 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     }
   }
 
+  const titleByStep: Record<Step, string> = {
+    search: "Add to your collection",
+    scan: "Scan a barcode",
+    confirm: "Add to your collection",
+  };
+  const descriptionByStep: Record<Step, string | undefined> = {
+    search: "Search movies, TV shows, games, and books to add to your collection.",
+    scan: "Scan a book's ISBN, or a movie, show, or game's barcode.",
+    confirm: undefined,
+  };
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          <Button>+ Add Item</Button>
-        </DialogTrigger>
-        <DialogContent
-          title="Add to your collection"
-          description={
-            selected
-              ? undefined
-              : "Search movies, TV shows, games, and books to add to your collection."
-          }
-        >
-        {!selected ? (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button className="shrink-0 whitespace-nowrap">+ Add Item</Button>
+      </DialogTrigger>
+      <DialogContent title={titleByStep[step]} description={descriptionByStep[step]}>
+        {step === "search" && (
           <div className="flex flex-col gap-4">
             <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
               {MEDIA_TYPES.map((type) => (
@@ -200,7 +214,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setScannerOpen(true)}
+              onClick={() => setStep("scan")}
               className="justify-center gap-2"
             >
               <Camera className="h-4 w-4" />
@@ -243,7 +257,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   <li key={`${result.source}-${result.externalId}`}>
                     <button
                       type="button"
-                      onClick={() => setSelected(result)}
+                      onClick={() => handleSelectResult(result)}
                       className="focus-ring flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-surface-raised"
                     >
                       <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded bg-surface-raised">
@@ -269,7 +283,17 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </ul>
             </div>
           </div>
-        ) : (
+        )}
+
+        {step === "scan" && (
+          <BarcodeScannerPanel
+            mediaType={mediaType}
+            onResults={handleBarcodeResults}
+            onBack={() => setStep("search")}
+          />
+        )}
+
+        {step === "confirm" && selected && (
           <div className="flex flex-col gap-4">
             <div className="flex gap-4">
               <div className="relative h-32 w-22 shrink-0 overflow-hidden rounded-lg bg-surface-raised">
@@ -360,7 +384,14 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSelected(null)} disabled={savingAction !== null}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelected(null);
+                  setStep("search");
+                }}
+                disabled={savingAction !== null}
+              >
                 Back
               </Button>
               <Button
@@ -376,15 +407,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             </div>
           </div>
         )}
-        </DialogContent>
-      </Dialog>
-
-      <BarcodeScannerModal
-        open={scannerOpen}
-        onOpenChange={setScannerOpen}
-        mediaType={mediaType}
-        onResults={handleBarcodeResults}
-      />
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

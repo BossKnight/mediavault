@@ -4,6 +4,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-query";
+import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
 
 const createCatalogSchema = z.object({
   source: z.enum(["TMDB", "RAWG", "OPENLIBRARY"]),
@@ -23,17 +25,16 @@ const createCatalogSchema = z.object({
   platform: z.string().max(60).nullable().optional(),
 });
 
-const VALID_STATUSES = [
-  "PLAN_TO_WATCH",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "ON_HOLD",
-  "DROPPED",
-];
-const VALID_MEDIA_TYPES = ["MOVIE", "TV", "GAME", "BOOK"];
 const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
 
-/** Lists the current user's catalog, with optional status / ownership / mediaType / q filters. */
+/**
+ * Lists one page of the current user's catalog, with optional status /
+ * ownership / mediaType / q filters and a choice of sort — all applied in
+ * the database, not in the client, so results stay correct and the payload
+ * stays bounded no matter how large the collection grows. Pass the
+ * previous response's `nextCursor` back as `cursor` to fetch the next
+ * page; a null `nextCursor` means there isn't one.
+ */
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -41,37 +42,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const ownership = searchParams.get("ownership");
-  const mediaType = searchParams.get("mediaType");
-  const q = searchParams.get("q")?.trim();
+  const ownershipParam = searchParams.get("ownership");
+  const cursor = searchParams.get("cursor") ?? undefined;
 
-  const mediaItemWhere: Prisma.MediaItemWhereInput = {};
-  if (mediaType && VALID_MEDIA_TYPES.includes(mediaType)) {
-    mediaItemWhere.mediaType = mediaType as Prisma.EnumMediaTypeFilter["equals"];
-  }
-  if (q) {
-    mediaItemWhere.title = { contains: q, mode: "insensitive" };
-  }
+  const params: CatalogQueryParams = {
+    ownership: ownershipParam && VALID_OWNERSHIP.includes(ownershipParam) ? (ownershipParam as CatalogQueryParams["ownership"]) : "OWNED",
+    status: readStatusParam(searchParams.get("status")),
+    mediaType: readMediaTypeParam(searchParams.get("mediaType")),
+    q: searchParams.get("q")?.trim() || undefined,
+    sort: readSortParam(searchParams.get("sort")),
+  };
 
-  const where: Prisma.UserMediaProgressWhereInput = { userId };
-  if (status && VALID_STATUSES.includes(status)) {
-    where.status = status as Prisma.EnumWatchStatusFilter["equals"];
-  }
-  if (ownership && VALID_OWNERSHIP.includes(ownership)) {
-    where.ownership = ownership as Prisma.EnumOwnershipStatusFilter["equals"];
-  }
-  if (Object.keys(mediaItemWhere).length > 0) {
-    where.mediaItem = mediaItemWhere;
-  }
-
-  const rows = await prisma.userMediaProgress.findMany({
-    where,
-    include: catalogEntryInclude,
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return NextResponse.json({ entries: rows.map(toCatalogEntry) });
+  const page = await fetchCatalogPage(userId, params, cursor);
+  return NextResponse.json(page);
 }
 
 /**

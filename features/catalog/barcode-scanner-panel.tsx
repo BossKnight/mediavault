@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/icons";
@@ -12,27 +11,22 @@ import type { MediaType, UnifiedSearchResult } from "@/types/media";
 // physical media and books.
 const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e"];
 
-interface BarcodeScannerModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface BarcodeScannerPanelProps {
   mediaType: MediaType;
   onResults: (results: UnifiedSearchResult[]) => void;
+  onBack: () => void;
 }
 
 /**
- * Camera barcode scanning via the browser-native BarcodeDetector API, with
- * an always-present manual entry field as the fallback — both because not
- * every browser supports BarcodeDetector (notably Safari and Firefox) and
- * because camera permission can always be denied. A book's ISBN resolves
- * on its own; any other code needs the modal's currently-selected media
- * type to know what to search for once it resolves to a product name.
+ * The camera/manual-entry barcode scan step. Rendered as a step inside
+ * AddItemModal's single dialog rather than its own nested Dialog — two
+ * stacked Radix dialogs would each render a full-screen overlay, and the
+ * two would visibly compound. AddItemModal mounts this fresh each time
+ * the step is entered and unmounts it on leaving, so "start the camera on
+ * mount, stop it on unmount" is this component's whole lifecycle — no
+ * open/close prop needed.
  */
-export function BarcodeScannerModal({
-  open,
-  onOpenChange,
-  mediaType,
-  onResults,
-}: BarcodeScannerModalProps) {
+export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeScannerPanelProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -54,21 +48,10 @@ export function BarcodeScannerModal({
   }
 
   useEffect(() => {
-    if (!open) {
-      stopCamera();
-      return;
-    }
-
-    resolvedRef.current = false;
-    setCameraError(null);
-    setLookupError(null);
-    setManualCode("");
-
     if (!("BarcodeDetector" in window) || !window.BarcodeDetector) {
       setCameraSupported(false);
       return;
     }
-    setCameraSupported(true);
 
     let cancelled = false;
     const detector = new window.BarcodeDetector({ formats: BARCODE_FORMATS });
@@ -112,8 +95,9 @@ export function BarcodeScannerModal({
       cancelled = true;
       stopCamera();
     };
+    // Runs once per mount by design — see the component doc comment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, []);
 
   async function performLookup(code: string) {
     setLooking(true);
@@ -135,7 +119,6 @@ export function BarcodeScannerModal({
       }
 
       onResults(data.results as UnifiedSearchResult[]);
-      onOpenChange(false);
     } catch {
       setLookupError("Couldn't look up that barcode. Check your connection and try again.");
     } finally {
@@ -152,62 +135,55 @@ export function BarcodeScannerModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        title="Scan a barcode"
-        description="Scan a book's ISBN, or a movie, show, or game's barcode."
-      >
-        <div className="flex flex-col gap-4">
-          {cameraSupported && !cameraError && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
-              <video
-                ref={videoRef}
-                muted
-                playsInline
-                className="h-full w-full object-cover"
-              />
-              <div className="pointer-events-none absolute inset-8 rounded-lg border-2 border-white/70" />
-              {looking && (
-                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm text-white">
-                  <Loader className="h-4 w-4" />
-                  Looking that up...
-                </div>
-              )}
+    <div className="flex flex-col gap-4">
+      {cameraSupported && !cameraError && (
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+          <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
+          <div className="pointer-events-none absolute inset-8 rounded-lg border-2 border-white/70" />
+          {looking && (
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 text-sm text-white">
+              <Loader className="h-4 w-4" />
+              Looking that up...
             </div>
           )}
-
-          {!cameraSupported && (
-            <p className="text-sm text-muted-foreground">
-              Live camera scanning isn&rsquo;t available in this browser. Enter the barcode
-              number below instead.
-            </p>
-          )}
-
-          {cameraError && <p className="text-sm text-danger">{cameraError}</p>}
-
-          <form onSubmit={handleManualSubmit} className="flex flex-col gap-2">
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-surface-foreground">
-                Or enter the barcode number
-              </span>
-              <div className="flex gap-2">
-                <Input
-                  value={manualCode}
-                  onChange={(event) => setManualCode(event.target.value)}
-                  placeholder="e.g. 9780261103573"
-                  inputMode="numeric"
-                  className="flex-1"
-                />
-                <Button type="submit" disabled={!manualCode.trim() || looking}>
-                  {looking ? "Looking up..." : "Look up"}
-                </Button>
-              </div>
-            </label>
-          </form>
-
-          {lookupError && <p className="text-sm text-danger">{lookupError}</p>}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {!cameraSupported && (
+        <p className="text-sm text-muted-foreground">
+          Live camera scanning isn&rsquo;t available in this browser. Enter the barcode
+          number below instead.
+        </p>
+      )}
+
+      {cameraError && <p className="text-sm text-danger">{cameraError}</p>}
+
+      <form onSubmit={handleManualSubmit} className="flex flex-col gap-2">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-surface-foreground">
+            Or enter the barcode number
+          </span>
+          <div className="flex gap-2">
+            <Input
+              value={manualCode}
+              onChange={(event) => setManualCode(event.target.value)}
+              placeholder="e.g. 9780261103573"
+              inputMode="numeric"
+              className="flex-1"
+              autoFocus
+            />
+            <Button type="submit" disabled={!manualCode.trim() || looking}>
+              {looking ? "Looking up..." : "Look up"}
+            </Button>
+          </div>
+        </label>
+      </form>
+
+      {lookupError && <p className="text-sm text-danger">{lookupError}</p>}
+
+      <Button type="button" variant="secondary" onClick={onBack} disabled={looking}>
+        Back
+      </Button>
+    </div>
   );
 }

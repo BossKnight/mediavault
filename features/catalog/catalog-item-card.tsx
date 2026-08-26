@@ -10,9 +10,13 @@ import type { CatalogEntry } from "@/types/media";
 interface CatalogItemCardProps {
   entry: CatalogEntry;
   onSelect: (entry: CatalogEntry) => void;
+  // Set for the first visible row of cards so Next eagerly fetches (and
+  // hints as high fetch-priority) whichever of them is likely this page's
+  // LCP element. Left false for the rest, which stay lazy as normal.
+  priority?: boolean;
 }
 
-export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
+export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardProps) {
   const { mediaItem } = entry;
 
   return (
@@ -29,6 +33,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
             fill
             sizes="(min-width: 1024px) 200px, (min-width: 640px) 33vw, 45vw"
             className="object-cover transition-transform group-hover:scale-[1.02]"
+            priority={priority}
           />
         ) : (
           <CoverArt

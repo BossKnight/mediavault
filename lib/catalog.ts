@@ -1,7 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type {
   CatalogEntry,
-  CatalogSort,
   CatalogStats,
   WatchStatus,
   MediaType,
@@ -49,7 +48,15 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
   };
 }
 
-export function computeStats(entries: CatalogEntry[]): CatalogStats {
+// Only these fields are ever read, so a stats-only Prisma query (see
+// lib/catalog-query.ts's fetchCatalogStats) can select just this narrow
+// shape rather than the full CatalogEntry — a real CatalogEntry[] still
+// satisfies this structurally, so every existing caller is unaffected.
+type StatsSourceEntry = Pick<CatalogEntry, "status" | "rating"> & {
+  mediaItem: Pick<CatalogEntry["mediaItem"], "mediaType">;
+};
+
+export function computeStats(entries: StatsSourceEntry[]): CatalogStats {
   const byStatus: Record<WatchStatus, number> = {
     PLAN_TO_WATCH: 0,
     IN_PROGRESS: 0,
@@ -85,39 +92,16 @@ export function computeStats(entries: CatalogEntry[]): CatalogStats {
 }
 
 /**
- * Returns a new array, sorted for catalog display. "recent" orders by when
- * the item was added to the catalog (not last edited), "title" is
- * alphabetical, and "rating" puts the highest-rated items first with
- * unrated items last regardless of direction.
- */
-export function sortCatalogEntries(entries: CatalogEntry[], sort: CatalogSort): CatalogEntry[] {
-  const sorted = [...entries];
-
-  switch (sort) {
-    case "title":
-      sorted.sort((a, b) => a.mediaItem.title.localeCompare(b.mediaItem.title));
-      break;
-    case "rating":
-      sorted.sort((a, b) => {
-        if (a.rating == null && b.rating == null) return 0;
-        if (a.rating == null) return 1;
-        if (b.rating == null) return -1;
-        return b.rating - a.rating;
-      });
-      break;
-    case "recent":
-      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      break;
-  }
-
-  return sorted;
-}
-
-/**
  * A lightweight "what to try next" heuristic: surfaces plan-to-watch titles
  * in the genres the user rates highest. It only looks at the user's own
  * rated entries, not a real recommendation engine, just enough to point at
  * something worth trying next.
+ *
+ * Note: this only sees whatever page(s) of the catalog are currently
+ * loaded in the client (see catalog-view.tsx) — with the catalog now
+ * paginated, that's the same honest "not exhaustive" tradeoff the
+ * function already made about being a real recommendation engine, just
+ * extended to cover collections larger than one page too.
  */
 export function recommendNext(entries: CatalogEntry[]): CatalogEntry[] {
   const genreScore = new Map<string, { sum: number; count: number }>();

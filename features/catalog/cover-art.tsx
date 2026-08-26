@@ -10,6 +10,10 @@ const MEDIA_ICONS: Record<MediaType, typeof Film> = {
   BOOK: Book,
 };
 
+// Skipped when picking initials so e.g. "Game of Thrones" reads as "GT",
+// not "GO" — a short function word rarely carries a title's identity.
+const INITIALS_STOPWORDS = new Set(["a", "an", "and", "of", "the"]);
+
 interface CoverArtProps {
   id: string;
   title: string;
@@ -29,6 +33,7 @@ export function CoverArt({ id, title, mediaType, className }: CoverArtProps) {
   const initials = title
     .split(/\s+/)
     .filter((word) => /[a-z0-9]/i.test(word))
+    .filter((word) => !INITIALS_STOPWORDS.has(word.toLowerCase()))
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase())
     .join("");

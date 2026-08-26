@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStats, recommendNext, sortCatalogEntries } from "@/lib/catalog";
+import { computeStats, recommendNext } from "@/lib/catalog";
 import type { CatalogEntry } from "@/types/media";
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
@@ -71,47 +71,6 @@ describe("computeStats", () => {
     const stats = computeStats(entries);
 
     expect(stats.averageRating).toBe(3.5);
-  });
-});
-
-describe("sortCatalogEntries", () => {
-  const entries = [
-    makeEntry({
-      id: "1",
-      rating: 3,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      mediaItem: { ...makeEntry().mediaItem, title: "Breaking Bad" },
-    }),
-    makeEntry({
-      id: "2",
-      rating: null,
-      createdAt: "2024-03-01T00:00:00.000Z",
-      mediaItem: { ...makeEntry().mediaItem, title: "Arrival" },
-    }),
-    makeEntry({
-      id: "3",
-      rating: 5,
-      createdAt: "2024-02-01T00:00:00.000Z",
-      mediaItem: { ...makeEntry().mediaItem, title: "The Matrix" },
-    }),
-  ];
-
-  it("does not mutate the input array", () => {
-    const original = [...entries];
-    sortCatalogEntries(entries, "title");
-    expect(entries).toEqual(original);
-  });
-
-  it("sorts by title alphabetically", () => {
-    expect(sortCatalogEntries(entries, "title").map((entry) => entry.id)).toEqual(["2", "1", "3"]);
-  });
-
-  it("sorts by rating, highest first, with unrated entries last", () => {
-    expect(sortCatalogEntries(entries, "rating").map((entry) => entry.id)).toEqual(["3", "1", "2"]);
-  });
-
-  it("sorts by recently added, newest first", () => {
-    expect(sortCatalogEntries(entries, "recent").map((entry) => entry.id)).toEqual(["2", "3", "1"]);
   });
 });
 

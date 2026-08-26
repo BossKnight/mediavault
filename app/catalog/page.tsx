@@ -1,21 +1,37 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
-import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { fetchCatalogPage, fetchCatalogStats, type CatalogQueryParams } from "@/lib/catalog-query";
+import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
 import { CatalogView } from "@/features/catalog/catalog-view";
 import { AppHeader } from "@/features/navigation/app-header";
 
-export default async function CatalogPage() {
+interface CatalogPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function firstValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/login");
 
-  const rows = await prisma.userMediaProgress.findMany({
-    where: { userId, ownership: "OWNED" },
-    include: catalogEntryInclude,
-    orderBy: { updatedAt: "desc" },
-  });
-  const entries = rows.map(toCatalogEntry);
+  const sp = await searchParams;
+  const params: CatalogQueryParams = {
+    ownership: "OWNED",
+    status: readStatusParam(firstValue(sp.status)),
+    mediaType: readMediaTypeParam(firstValue(sp.type)),
+    q: firstValue(sp.q)?.trim() || undefined,
+    sort: readSortParam(firstValue(sp.sort)),
+  };
+
+  // Fetched together, not chained — neither depends on the other's result.
+  const [page, stats] = await Promise.all([
+    fetchCatalogPage(userId, params),
+    fetchCatalogStats(userId, "OWNED"),
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -31,7 +47,11 @@ export default async function CatalogPage() {
       </div>
 
       <Suspense fallback={null}>
-        <CatalogView initialEntries={entries} />
+        <CatalogView
+          initialEntries={page.entries}
+          initialNextCursor={page.nextCursor}
+          initialStats={stats}
+        />
       </Suspense>
     </main>
   );

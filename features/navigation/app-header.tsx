@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 import { SignOutButton } from "@/features/auth/sign-out-button";
+import { ThemeToggle } from "@/features/navigation/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -43,7 +44,10 @@ export function AppHeader() {
           })}
         </nav>
       </div>
-      <SignOutButton />
+      <div className="flex shrink-0 items-center gap-2">
+        <ThemeToggle />
+        <SignOutButton />
+      </div>
     </div>
   );
 }

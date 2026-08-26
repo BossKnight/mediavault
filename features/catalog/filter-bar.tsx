@@ -1,14 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { Search } from "@/components/ui/icons";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronDown, Search } from "@/components/ui/icons";
 import {
   CATALOG_SORT_LABELS,
   MEDIA_TYPE_LABELS,
@@ -78,7 +71,7 @@ export function FilterBar({
         />
         {status !== undefined && onStatusChange && (
           <>
-            <span className="h-4 w-px bg-border" aria-hidden />
+            <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
             <FilterChipGroup
               value={status}
               onChange={onStatusChange}
@@ -87,24 +80,28 @@ export function FilterBar({
             />
           </>
         )}
-        <span className="h-4 w-px bg-border" aria-hidden />
+        <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <span id="catalog-sort-label">Sort</span>
-          <Select value={sort} onValueChange={(value) => onSortChange(value as CatalogSort)}>
-            <SelectTrigger
+          {/* A native select instead of Radix here: this is the one Select
+              usage that renders eagerly on every catalog/wishlist visit
+              rather than inside an on-demand modal, so it's worth the
+              small amount of native-picker styling it gives up. */}
+          <div className="relative">
+            <select
               aria-labelledby="catalog-sort-label"
-              className="h-7 w-auto gap-1 rounded-full border-border bg-transparent px-2.5 py-0 text-xs font-medium text-foreground"
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value as CatalogSort)}
+              className="focus-ring h-7 appearance-none rounded-full border border-border bg-transparent py-0 pl-2.5 pr-6 text-xs font-medium text-foreground"
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
               {sortOptions.map((option) => (
-                <SelectItem key={option} value={option}>
+                <option key={option} value={option}>
                   {CATALOG_SORT_LABELS[option]}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
         </div>
       </div>
     </div>
