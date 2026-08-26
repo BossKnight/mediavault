@@ -2,9 +2,9 @@
 // the boundary between external metadata providers (TMDB, RAWG), the
 // database, and the UI.
 
-export type MediaType = "MOVIE" | "TV" | "GAME";
+export type MediaType = "MOVIE" | "TV" | "GAME" | "BOOK";
 
-export type MetadataSource = "TMDB" | "RAWG";
+export type MetadataSource = "TMDB" | "RAWG" | "OPENLIBRARY";
 
 export type WatchStatus =
   | "PLAN_TO_WATCH"
@@ -33,6 +33,7 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   MOVIE: "Movie",
   TV: "TV Show",
   GAME: "Game",
+  BOOK: "Book",
 };
 
 /**
@@ -52,6 +53,11 @@ export function getStatusLabel(status: WatchStatus, mediaType: MediaType): strin
   if (mediaType === "GAME" && status === "PLAN_TO_WATCH") {
     return "In Backlog";
   }
+  if (mediaType === "BOOK") {
+    if (status === "PLAN_TO_WATCH") return "To Read";
+    if (status === "IN_PROGRESS") return "Reading";
+    if (status === "COMPLETED") return "Read";
+  }
   return WATCH_STATUS_LABELS[status];
 }
 
@@ -61,6 +67,10 @@ export function getStatusLabel(status: WatchStatus, mediaType: MediaType): strin
  */
 export const PHYSICAL_FORMATS = ["VHS", "DVD", "Blu-Ray", "4K UHD"] as const;
 export type PhysicalFormat = (typeof PHYSICAL_FORMATS)[number];
+
+/** Physical book format, stored in the same `platform` column as above. */
+export const BOOK_FORMATS = ["Hardcover", "Paperback", "Mass Market Paperback", "Audiobook"] as const;
+export type BookFormat = (typeof BOOK_FORMATS)[number];
 
 /**
  * A single search result, normalized from whichever external provider
@@ -77,6 +87,9 @@ export interface UnifiedSearchResult {
   overview: string | null;
   genres: string[];
   creator: string | null;
+  // Book only — carried through so a barcode-scanned title round-trips
+  // straight to the catalog with its ISBN attached.
+  isbn?: string | null;
 }
 
 /**
@@ -108,6 +121,7 @@ export interface CatalogEntry {
     overview: string | null;
     genres: string[];
     creator: string | null;
+    isbn: string | null;
   };
 }
 

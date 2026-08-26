@@ -25,7 +25,7 @@ const ItemDetailModal = dynamic(
   { ssr: false },
 );
 
-const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 const WATCH_STATUSES: WatchStatus[] = [
   "PLAN_TO_WATCH",
   "IN_PROGRESS",
@@ -197,7 +197,7 @@ function EmptyState({ hasAnyEntries, onClearFilters }: EmptyStateProps) {
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add Item” to search for a movie, show, or game to catalog."}
+            : "Use “Add Item” to search for a movie, show, game, or book to catalog."}
         </p>
       </div>
       {hasAnyEntries && (

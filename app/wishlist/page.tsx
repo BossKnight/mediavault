@@ -25,7 +25,7 @@ export default async function WishlistPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-foreground">Your wishlist</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Movies, TV shows, and games you want to own next.
+            Movies, TV shows, games, and books you want to own next.
           </p>
         </div>
       </div>

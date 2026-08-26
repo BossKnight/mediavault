@@ -20,7 +20,7 @@ const ItemDetailModal = dynamic(
   { ssr: false },
 );
 
-const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 // No "rating" sort here — nothing on the wishlist has been rated yet.
 const SORTS: CatalogSort[] = ["recent", "title"];
 
@@ -164,7 +164,7 @@ function EmptyState({ hasAnyEntries, onClearFilters }: EmptyStateProps) {
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add Item” to save a movie, show, or game you want to own."}
+            : "Use “Add Item” to save a movie, show, game, or book you want to own."}
         </p>
       </div>
       {hasAnyEntries && (

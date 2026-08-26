@@ -6,15 +6,16 @@ import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
 
 const createCatalogSchema = z.object({
-  source: z.enum(["TMDB", "RAWG"]),
+  source: z.enum(["TMDB", "RAWG", "OPENLIBRARY"]),
   externalId: z.string().min(1),
-  mediaType: z.enum(["MOVIE", "TV", "GAME"]),
+  mediaType: z.enum(["MOVIE", "TV", "GAME", "BOOK"]),
   title: z.string().min(1),
   releaseDate: z.string().nullable().optional(),
   coverUrl: z.string().url().nullable().optional(),
   overview: z.string().nullable().optional(),
   genres: z.array(z.string()).optional(),
   creator: z.string().nullable().optional(),
+  isbn: z.string().max(20).nullable().optional(),
   status: z
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
@@ -29,7 +30,7 @@ const VALID_STATUSES = [
   "ON_HOLD",
   "DROPPED",
 ];
-const VALID_MEDIA_TYPES = ["MOVIE", "TV", "GAME"];
+const VALID_MEDIA_TYPES = ["MOVIE", "TV", "GAME", "BOOK"];
 const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
 
 /** Lists the current user's catalog, with optional status / ownership / mediaType / q filters. */
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
       overview: data.overview ?? null,
       genres: data.genres ?? [],
       creator: data.creator ?? null,
+      isbn: data.isbn ?? null,
     },
     create: {
       source: data.source,
@@ -114,6 +116,7 @@ export async function POST(request: Request) {
       overview: data.overview ?? null,
       genres: data.genres ?? [],
       creator: data.creator ?? null,
+      isbn: data.isbn ?? null,
     },
   });
 

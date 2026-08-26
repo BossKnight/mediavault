@@ -19,7 +19,7 @@ import {
 } from "@/types/media";
 import { cn } from "@/lib/utils";
 
-const MEDIA_TYPE_FILTERS: ("ALL" | MediaType)[] = ["ALL", "MOVIE", "TV", "GAME"];
+const MEDIA_TYPE_FILTERS: ("ALL" | MediaType)[] = ["ALL", "MOVIE", "TV", "GAME", "BOOK"];
 const STATUS_FILTERS: ("ALL" | WatchStatus)[] = [
   "ALL",
   "PLAN_TO_WATCH",

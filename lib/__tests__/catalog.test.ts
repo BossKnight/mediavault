@@ -28,6 +28,7 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
       overview: null,
       genres: [],
       creator: null,
+      isbn: null,
     },
     ...overrides,
   };

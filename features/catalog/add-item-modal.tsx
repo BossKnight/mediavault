@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader, Search } from "@/components/ui/icons";
+import { Camera, Loader, Search } from "@/components/ui/icons";
+import { BarcodeScannerModal } from "@/features/catalog/barcode-scanner-modal";
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
+  BOOK_FORMATS,
   MEDIA_TYPE_LABELS,
   PHYSICAL_FORMATS,
   type CatalogEntry,
@@ -24,7 +26,7 @@ import {
   type UnifiedSearchResult,
 } from "@/types/media";
 
-const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 // Sentinel for "no format/platform set" — Radix Select items can't use "".
 const PLATFORM_NONE = "NONE";
 
@@ -51,6 +53,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const trimmedQuery = debouncedQuery.trim();
 
@@ -97,6 +100,20 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setRetryToken((token) => token + 1);
   }
 
+  // A resolved barcode is treated as an unambiguous pick: it jumps straight
+  // to the confirm screen instead of dropping the user into a results list,
+  // matching the "scan it and it's in your collection" point of scanning in
+  // the first place. If the code turned out to be a book's ISBN, the media
+  // type tab switches to match even if a different tab was active.
+  function handleBarcodeResults(results: UnifiedSearchResult[]) {
+    const [first] = results;
+    if (!first) return;
+    if (first.mediaType !== mediaType) {
+      setMediaType(first.mediaType);
+    }
+    setSelected(first);
+  }
+
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (!next) reset();
@@ -136,18 +153,19 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>+ Add Item</Button>
-      </DialogTrigger>
-      <DialogContent
-        title="Add to your collection"
-        description={
-          selected
-            ? undefined
-            : "Search movies, TV shows, and games to add to your collection."
-        }
-      >
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          <Button>+ Add Item</Button>
+        </DialogTrigger>
+        <DialogContent
+          title="Add to your collection"
+          description={
+            selected
+              ? undefined
+              : "Search movies, TV shows, games, and books to add to your collection."
+          }
+        >
         {!selected ? (
           <div className="flex flex-col gap-4">
             <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
@@ -178,6 +196,16 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                 aria-label="Search"
               />
             </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setScannerOpen(true)}
+              className="justify-center gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Scan barcode
+            </Button>
 
             <div className="max-h-80 min-h-24 overflow-y-auto rounded-lg">
               {searching && (
@@ -274,7 +302,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </div>
             </div>
 
-            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") ? (
+            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") && (
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-surface-foreground">Platform</span>
                 <Select
@@ -294,7 +322,31 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   </SelectContent>
                 </Select>
               </label>
-            ) : (
+            )}
+
+            {selected.mediaType === "BOOK" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-surface-foreground">Format</span>
+                <Select
+                  value={platform || PLATFORM_NONE}
+                  onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
+                    {BOOK_FORMATS.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+
+            {selected.mediaType === "GAME" && (
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-surface-foreground">Platform</span>
                 <Input
@@ -324,7 +376,15 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        mediaType={mediaType}
+        onResults={handleBarcodeResults}
+      />
+    </>
   );
 }

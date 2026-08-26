@@ -64,8 +64,8 @@ export function StatsPanel({
           value={stats.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
         />
         <StatTile
-          label="Movies / TV / Games"
-          value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME}`}
+          label="Movies / TV / Games / Books"
+          value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME} / ${stats.byMediaType.BOOK}`}
           small
         />
       </div>

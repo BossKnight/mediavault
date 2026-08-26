@@ -98,3 +98,21 @@ export function Sparkles(props: IconProps) {
     </svg>
   );
 }
+
+export function Book(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  );
+}
+
+export function Camera(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h7l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  );
+}

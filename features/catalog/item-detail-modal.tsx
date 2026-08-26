@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  BOOK_FORMATS,
   OWNERSHIP_STATUS_LABELS,
   PHYSICAL_FORMATS,
   getStatusLabel,
@@ -301,6 +302,28 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                     <SelectContent>
                       <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
                       {PHYSICAL_FORMATS.map((format) => (
+                        <SelectItem key={format} value={format}>
+                          {format}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+              )}
+
+              {mediaItem.mediaType === "BOOK" && (
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-surface-foreground">Format</span>
+                  <Select
+                    value={platform || PLATFORM_NONE}
+                    onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
+                      {BOOK_FORMATS.map((format) => (
                         <SelectItem key={format} value={format}>
                           {format}
                         </SelectItem>

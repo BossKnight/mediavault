@@ -44,6 +44,7 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
       overview: row.mediaItem.overview,
       genres: row.mediaItem.genres,
       creator: row.mediaItem.creator,
+      isbn: row.mediaItem.isbn,
     },
   };
 }
@@ -60,6 +61,7 @@ export function computeStats(entries: CatalogEntry[]): CatalogStats {
     MOVIE: 0,
     TV: 0,
     GAME: 0,
+    BOOK: 0,
   };
 
   let ratingSum = 0;

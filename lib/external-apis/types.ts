@@ -33,3 +33,47 @@ export interface RawgGame {
 export interface RawgSearchResponse {
   results: RawgGame[];
 }
+
+// Open Library's /search.json endpoint (searchOpenLibrary). Each "doc" is a
+// work, not a specific edition — there's no ISBN here, only the ISBN
+// endpoint below returns one.
+export interface OpenLibrarySearchDoc {
+  key: string; // e.g. "/works/OL45804W"
+  title?: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  cover_i?: number;
+  subject?: string[];
+}
+
+export interface OpenLibrarySearchResponse {
+  docs: OpenLibrarySearchDoc[];
+}
+
+// Open Library's /api/books?jscmd=data endpoint (lookupIsbn) — a single
+// edition, keyed by "ISBN:{isbn}" in the response.
+export interface OpenLibraryBookData {
+  key?: string; // e.g. "/books/OL2724993M"
+  title?: string;
+  authors?: { name: string }[];
+  publish_date?: string;
+  cover?: { small?: string; medium?: string; large?: string };
+  subjects?: { name: string }[];
+}
+
+export type OpenLibraryIsbnResponse = Record<string, OpenLibraryBookData>;
+
+// Google Books' /volumes endpoint — used only to backfill a cover or
+// description Open Library is missing for a given ISBN.
+export interface GoogleBooksVolumeInfo {
+  title?: string;
+  authors?: string[];
+  publishedDate?: string;
+  description?: string;
+  imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+  categories?: string[];
+}
+
+export interface GoogleBooksResponse {
+  items?: { volumeInfo?: GoogleBooksVolumeInfo }[];
+}

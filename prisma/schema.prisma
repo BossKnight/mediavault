@@ -22,11 +22,13 @@ enum MediaType {
   MOVIE
   TV
   GAME
+  BOOK
 }
 
 enum MetadataSource {
   TMDB
   RAWG
+  OPENLIBRARY
 }
 
 enum WatchStatus {
@@ -67,6 +69,8 @@ model MediaItem {
   genres      String[]
   // Director (movie), showrunner/network (TV), or developer (game).
   creator     String?
+  // Book only — the barcode-lookup key. Never set for other media types.
+  isbn        String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

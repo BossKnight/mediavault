@@ -1,6 +1,7 @@
 import type { MediaType, UnifiedSearchResult } from "@/types/media";
 import { searchTmdb } from "./tmdb";
 import { searchRawg } from "./rawg";
+import { searchOpenLibrary } from "./openlibrary";
 
 export type { UnifiedSearchResult };
 
@@ -23,5 +24,7 @@ export async function searchMedia(
       return searchTmdb(trimmed, "TV");
     case "GAME":
       return searchRawg(trimmed);
+    case "BOOK":
+      return searchOpenLibrary(trimmed);
   }
 }

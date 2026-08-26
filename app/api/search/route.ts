@@ -3,14 +3,15 @@ import { getCurrentUserId } from "@/lib/session";
 import { searchMedia } from "@/lib/external-apis";
 import type { MediaType } from "@/types/media";
 
-const VALID_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+const VALID_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 
-// Accepts the lowercase `movie|tv|game` values from the spec's query string
-// and maps them to the uppercase MediaType used internally.
+// Accepts the lowercase `movie|tv|game|book` values from the spec's query
+// string and maps them to the uppercase MediaType used internally.
 const TYPE_PARAM_MAP: Record<string, MediaType> = {
   movie: "MOVIE",
   tv: "TV",
   game: "GAME",
+  book: "BOOK",
 };
 
 export async function GET(request: Request) {
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   }
   if (!mediaType || !VALID_TYPES.includes(mediaType)) {
     return NextResponse.json(
-      { error: "Query parameter 'type' must be one of movie, tv, game" },
+      { error: "Query parameter 'type' must be one of movie, tv, game, book" },
       { status: 400 },
     );
   }

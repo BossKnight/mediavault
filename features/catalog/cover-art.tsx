@@ -1,4 +1,4 @@
-import { Film, Gamepad, Tv } from "@/components/ui/icons";
+import { Book, Film, Gamepad, Tv } from "@/components/ui/icons";
 import { hueFromString } from "@/lib/hash";
 import type { MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ const MEDIA_ICONS: Record<MediaType, typeof Film> = {
   MOVIE: Film,
   TV: Tv,
   GAME: Gamepad,
+  BOOK: Book,
 };
 
 interface CoverArtProps {
