@@ -3,15 +3,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
-import { CatalogView } from "@/features/catalog/catalog-view";
+import { WishlistView } from "@/features/wishlist/wishlist-view";
 import { AppHeader } from "@/features/navigation/app-header";
 
-export default async function CatalogPage() {
+export default async function WishlistPage() {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/login");
 
   const rows = await prisma.userMediaProgress.findMany({
-    where: { userId, ownership: "OWNED" },
+    where: { userId, ownership: "WISHLIST" },
     include: catalogEntryInclude,
     orderBy: { updatedAt: "desc" },
   });
@@ -23,15 +23,15 @@ export default async function CatalogPage() {
 
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-foreground">Your catalog</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Your wishlist</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Movies, TV shows, and games you own or plan to get to.
+            Movies, TV shows, and games you want to own next.
           </p>
         </div>
       </div>
 
       <Suspense fallback={null}>
-        <CatalogView initialEntries={entries} />
+        <WishlistView initialEntries={entries} />
       </Suspense>
     </main>
   );

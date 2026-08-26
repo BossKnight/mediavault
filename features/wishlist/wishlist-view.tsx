@@ -5,18 +5,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
-import { StatsPanel } from "@/features/catalog/stats-panel";
 import { Button } from "@/components/ui/button";
-import { computeStats, sortCatalogEntries } from "@/lib/catalog";
+import { sortCatalogEntries } from "@/lib/catalog";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import type { CatalogEntry, CatalogSort, MediaType, WatchStatus } from "@/types/media";
+import type { CatalogEntry, CatalogSort, MediaType } from "@/types/media";
 
-// Code-split the two modals out of the catalog page's main bundle: neither
-// is needed for the initial render (Add Item's dialog content and Item
-// Detail's entire tree are both closed by default), but each pulls in
-// Radix Dialog/Select. Add Item keeps SSR on since its trigger button is
-// visible immediately; Item Detail always renders null until a card is
-// clicked, so it never needs to be part of the server-rendered HTML at all.
+// Same code-splitting rationale as the catalog page: neither modal is
+// needed for the initial render.
 const AddItemModal = dynamic(() =>
   import("@/features/catalog/add-item-modal").then((mod) => mod.AddItemModal),
 );
@@ -26,32 +21,27 @@ const ItemDetailModal = dynamic(
 );
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
-const WATCH_STATUSES: WatchStatus[] = [
-  "PLAN_TO_WATCH",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "ON_HOLD",
-  "DROPPED",
-];
-const SORTS: CatalogSort[] = ["recent", "title", "rating"];
+// No "rating" sort here — nothing on the wishlist has been rated yet.
+const SORTS: CatalogSort[] = ["recent", "title"];
 
 function readMediaType(value: string | null): "ALL" | MediaType {
   return MEDIA_TYPES.includes(value as MediaType) ? (value as MediaType) : "ALL";
-}
-
-function readStatus(value: string | null): "ALL" | WatchStatus {
-  return WATCH_STATUSES.includes(value as WatchStatus) ? (value as WatchStatus) : "ALL";
 }
 
 function readSort(value: string | null): CatalogSort {
   return SORTS.includes(value as CatalogSort) ? (value as CatalogSort) : "recent";
 }
 
-interface CatalogViewProps {
+interface WishlistViewProps {
   initialEntries: CatalogEntry[];
 }
 
-export function CatalogView({ initialEntries }: CatalogViewProps) {
+/**
+ * A trimmed version of CatalogView for the wishlist: same URL-synced
+ * search/type/sort pattern, but no status filter or recommendations strip —
+ * neither means anything before a title is owned.
+ */
+export function WishlistView({ initialEntries }: WishlistViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -61,29 +51,20 @@ export function CatalogView({ initialEntries }: CatalogViewProps) {
   const [mediaTypeFilter, setMediaTypeFilter] = useState<"ALL" | MediaType>(() =>
     readMediaType(searchParams.get("type")),
   );
-  const [statusFilter, setStatusFilter] = useState<"ALL" | WatchStatus>(() =>
-    readStatus(searchParams.get("status")),
-  );
   const [sort, setSort] = useState<CatalogSort>(() => readSort(searchParams.get("sort")));
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null);
 
-  // Debounce only the URL write, not the filtering itself, so results stay
-  // instant while typing but a shared/refreshed link doesn't churn on every
-  // keystroke.
   const debouncedSearch = useDebouncedValue(search, 300);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
     if (mediaTypeFilter !== "ALL") params.set("type", mediaTypeFilter);
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (sort !== "recent") params.set("sort", sort);
 
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [debouncedSearch, mediaTypeFilter, statusFilter, sort, pathname, router]);
-
-  const stats = useMemo(() => computeStats(entries), [entries]);
+  }, [debouncedSearch, mediaTypeFilter, sort, pathname, router]);
 
   const filteredEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -91,35 +72,31 @@ export function CatalogView({ initialEntries }: CatalogViewProps) {
       if (mediaTypeFilter !== "ALL" && entry.mediaItem.mediaType !== mediaTypeFilter) {
         return false;
       }
-      if (statusFilter !== "ALL" && entry.status !== statusFilter) {
-        return false;
-      }
       if (query && !entry.mediaItem.title.toLowerCase().includes(query)) {
         return false;
       }
       return true;
     });
-  }, [entries, mediaTypeFilter, statusFilter, search]);
+  }, [entries, mediaTypeFilter, search]);
 
   const sortedEntries = useMemo(
     () => sortCatalogEntries(filteredEntries, sort),
     [filteredEntries, sort],
   );
 
-  // "Add Item" can also save straight to the wishlist (a secondary action in
-  // the same modal) — this page only shows owned entries, so a wishlist save
-  // doesn't belong in this list even though it succeeded.
+  // "Add Item" can also save straight to the owned catalog — this page only
+  // shows wishlist entries, so an owned save doesn't belong in this list
+  // even though it succeeded.
   function handleAdded(entry: CatalogEntry) {
-    if (entry.ownership !== "OWNED") return;
+    if (entry.ownership !== "WISHLIST") return;
     setEntries((current) => [entry, ...current]);
   }
 
-  // An entry can also leave ownership here (demoted to wishlist from the
-  // detail modal's toggle), in which case it drops out of this list instead
-  // of updating in place.
+  // Promoting an item to owned (from the detail modal's toggle) removes it
+  // from this list instead of updating it in place.
   function handleUpdated(entry: CatalogEntry) {
     setEntries((current) =>
-      entry.ownership === "OWNED"
+      entry.ownership === "WISHLIST"
         ? current.map((existing) => (existing.id === entry.id ? entry : existing))
         : current.filter((existing) => existing.id !== entry.id),
     );
@@ -132,29 +109,19 @@ export function CatalogView({ initialEntries }: CatalogViewProps) {
   function handleClearFilters() {
     setSearch("");
     setMediaTypeFilter("ALL");
-    setStatusFilter("ALL");
   }
 
   return (
     <div className="flex flex-col gap-8">
-      <StatsPanel
-        stats={stats}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        entries={entries}
-        onSelectRecommendation={setSelectedEntry}
-      />
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <FilterBar
           search={search}
           onSearchChange={setSearch}
           mediaType={mediaTypeFilter}
           onMediaTypeChange={setMediaTypeFilter}
-          status={statusFilter}
-          onStatusChange={setStatusFilter}
           sort={sort}
           onSortChange={setSort}
+          sortOptions={SORTS}
         />
         <AddItemModal onAdded={handleAdded} />
       </div>
@@ -192,12 +159,12 @@ function EmptyState({ hasAnyEntries, onClearFilters }: EmptyStateProps) {
     <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-border py-16 text-center">
       <div className="flex flex-col items-center gap-1">
         <p className="text-sm font-medium text-foreground">
-          {hasAnyEntries ? "No items match your filters" : "Your catalog is empty"}
+          {hasAnyEntries ? "No items match your filters" : "Your wishlist is empty"}
         </p>
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add Item” to search for a movie, show, or game to catalog."}
+            : "Use “Add Item” to save a movie, show, or game you want to own."}
         </p>
       </div>
       {hasAnyEntries && (

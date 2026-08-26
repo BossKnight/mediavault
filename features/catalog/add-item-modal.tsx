@@ -20,6 +20,7 @@ import {
   PHYSICAL_FORMATS,
   type CatalogEntry,
   type MediaType,
+  type OwnershipStatus,
   type UnifiedSearchResult,
 } from "@/types/media";
 
@@ -47,7 +48,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
   const [platform, setPlatform] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
 
@@ -101,16 +102,22 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     if (!next) reset();
   }
 
-  async function handleSave() {
+  async function handleSave(ownership: OwnershipStatus) {
     if (!selected) return;
-    setSaving(true);
+    setSavingAction(ownership);
     setSaveError(null);
 
     try {
       const response = await fetch("/api/catalog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...selected, platform: platform.trim() || null }),
+        body: JSON.stringify({
+          ...selected,
+          ownership,
+          // A wishlist item has no physical copy yet, so there's no format
+          // or platform to record — whatever's in the field is ignored.
+          platform: ownership === "OWNED" ? platform.trim() || null : null,
+        }),
       });
       const data = await response.json();
 
@@ -124,7 +131,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     } catch {
       setSaveError("Couldn't save this item. Check your connection and try again.");
     } finally {
-      setSaving(false);
+      setSavingAction(null);
     }
   }
 
@@ -301,11 +308,18 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSelected(null)} disabled={saving}>
+              <Button variant="secondary" onClick={() => setSelected(null)} disabled={savingAction !== null}>
                 Back
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save to catalog"}
+              <Button
+                variant="secondary"
+                onClick={() => handleSave("WISHLIST")}
+                disabled={savingAction !== null}
+              >
+                {savingAction === "WISHLIST" ? "Saving..." : "Add to Wishlist"}
+              </Button>
+              <Button onClick={() => handleSave("OWNED")} disabled={savingAction !== null}>
+                {savingAction === "OWNED" ? "Saving..." : "Save to catalog"}
               </Button>
             </div>
           </div>

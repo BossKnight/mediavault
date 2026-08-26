@@ -35,10 +35,14 @@ interface FilterBarProps {
   onSearchChange: (value: string) => void;
   mediaType: "ALL" | MediaType;
   onMediaTypeChange: (value: "ALL" | MediaType) => void;
-  status: "ALL" | WatchStatus;
-  onStatusChange: (value: "ALL" | WatchStatus) => void;
+  // Omitted on the Wishlist page, where a consumption status isn't
+  // meaningful yet — nothing's been started.
+  status?: "ALL" | WatchStatus;
+  onStatusChange?: (value: "ALL" | WatchStatus) => void;
   sort: CatalogSort;
   onSortChange: (value: CatalogSort) => void;
+  // Wishlist also drops "rating" as a sort option, since nothing has one.
+  sortOptions?: CatalogSort[];
 }
 
 export function FilterBar({
@@ -50,6 +54,7 @@ export function FilterBar({
   onStatusChange,
   sort,
   onSortChange,
+  sortOptions = SORT_OPTIONS,
 }: FilterBarProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -71,13 +76,17 @@ export function FilterBar({
           options={MEDIA_TYPE_FILTERS}
           labelFor={(option) => (option === "ALL" ? "All types" : MEDIA_TYPE_LABELS[option])}
         />
-        <span className="h-4 w-px bg-border" aria-hidden />
-        <FilterChipGroup
-          value={status}
-          onChange={onStatusChange}
-          options={STATUS_FILTERS}
-          labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
-        />
+        {status !== undefined && onStatusChange && (
+          <>
+            <span className="h-4 w-px bg-border" aria-hidden />
+            <FilterChipGroup
+              value={status}
+              onChange={onStatusChange}
+              options={STATUS_FILTERS}
+              labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
+            />
+          </>
+        )}
         <span className="h-4 w-px bg-border" aria-hidden />
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <span id="catalog-sort-label">Sort</span>
@@ -89,7 +98,7 @@ export function FilterBar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SORT_OPTIONS.map((option) => (
+              {sortOptions.map((option) => (
                 <SelectItem key={option} value={option}>
                   {CATALOG_SORT_LABELS[option]}
                 </SelectItem>

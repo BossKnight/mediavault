@@ -1,5 +1,12 @@
 import type { Prisma } from "@prisma/client";
-import type { CatalogEntry, CatalogSort, CatalogStats, WatchStatus, MediaType } from "@/types/media";
+import type {
+  CatalogEntry,
+  CatalogSort,
+  CatalogStats,
+  WatchStatus,
+  MediaType,
+  OwnershipStatus,
+} from "@/types/media";
 
 /** Shared Prisma include so every route returns the same joined shape. */
 export const catalogEntryInclude = {
@@ -15,6 +22,7 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
   return {
     id: row.id,
     status: row.status as WatchStatus,
+    ownership: row.ownership as OwnershipStatus,
     rating: row.rating,
     reviewNotes: row.reviewNotes,
     ownedSeasons: row.ownedSeasons,
@@ -129,6 +137,7 @@ export function recommendNext(entries: CatalogEntry[]): CatalogEntry[] {
   );
 
   return entries
+    .filter((entry) => entry.ownership === "OWNED")
     .filter((entry) => entry.status === "PLAN_TO_WATCH")
     .filter((entry) => entry.mediaItem.genres.some((genre) => favoredGenres.has(genre)))
     .slice(0, 4);

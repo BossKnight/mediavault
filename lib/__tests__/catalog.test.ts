@@ -6,6 +6,7 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   return {
     id: "entry-1",
     status: "PLAN_TO_WATCH",
+    ownership: "OWNED",
     rating: null,
     reviewNotes: null,
     ownedSeasons: [],
@@ -175,6 +176,26 @@ describe("recommendNext", () => {
     ];
 
     expect(recommendNext(entries)).toHaveLength(4);
+  });
+
+  it("never recommends a wishlist entry, even if it's plan-to-watch in a favored genre", () => {
+    const entries = [
+      genreEntry("rated-drama", { status: "COMPLETED", rating: 5, mediaItem: { ...makeEntry().mediaItem, genres: ["Drama"] } }),
+      genreEntry("wishlist-candidate", {
+        status: "PLAN_TO_WATCH",
+        ownership: "WISHLIST",
+        rating: null,
+        mediaItem: { ...makeEntry().mediaItem, genres: ["Drama"] },
+      }),
+      genreEntry("owned-candidate", {
+        status: "PLAN_TO_WATCH",
+        ownership: "OWNED",
+        rating: null,
+        mediaItem: { ...makeEntry().mediaItem, genres: ["Drama"] },
+      }),
+    ];
+
+    expect(recommendNext(entries).map((entry) => entry.id)).toEqual(["owned-candidate"]);
   });
 
   it("excludes unrated entries from genre scoring, but they can still surface via another rated entry's genre", () => {

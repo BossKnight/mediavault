@@ -8,6 +8,7 @@ const updateCatalogSchema = z.object({
   status: z
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
+  ownership: z.enum(["OWNED", "WISHLIST"]).optional(),
   rating: z.number().int().min(1).max(5).nullable().optional(),
   reviewNotes: z.string().max(4000).nullable().optional(),
   ownedSeasons: z.array(z.number().int().min(1)).optional(),

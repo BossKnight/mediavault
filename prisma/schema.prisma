@@ -37,6 +37,14 @@ enum WatchStatus {
   DROPPED
 }
 
+// Ownership is a separate axis from WatchStatus: a wishlist item is
+// something the user wants to own but doesn't yet, which is a different
+// question from how far along they are with something they do own.
+enum OwnershipStatus {
+  OWNED
+  WISHLIST
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -99,7 +107,13 @@ model UserMediaProgress {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Whether the user owns this title or just wants to. Kept separate from
+  // status: a wishlist item still defaults to PLAN_TO_WATCH so it behaves
+  // sensibly once promoted, but is never surfaced as owned until then.
+  ownership OwnershipStatus @default(OWNED)
+
   // One progress row per user per title.
   @@unique([userId, mediaItemId])
   @@index([userId, status])
+  @@index([userId, ownership])
 }

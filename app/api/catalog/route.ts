@@ -18,6 +18,7 @@ const createCatalogSchema = z.object({
   status: z
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
+  ownership: z.enum(["OWNED", "WISHLIST"]).optional(),
   platform: z.string().max(60).nullable().optional(),
 });
 
@@ -29,8 +30,9 @@ const VALID_STATUSES = [
   "DROPPED",
 ];
 const VALID_MEDIA_TYPES = ["MOVIE", "TV", "GAME"];
+const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
 
-/** Lists the current user's catalog, with optional status / mediaType / q filters. */
+/** Lists the current user's catalog, with optional status / ownership / mediaType / q filters. */
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const ownership = searchParams.get("ownership");
   const mediaType = searchParams.get("mediaType");
   const q = searchParams.get("q")?.trim();
 
@@ -53,6 +56,9 @@ export async function GET(request: Request) {
   const where: Prisma.UserMediaProgressWhereInput = { userId };
   if (status && VALID_STATUSES.includes(status)) {
     where.status = status as Prisma.EnumWatchStatusFilter["equals"];
+  }
+  if (ownership && VALID_OWNERSHIP.includes(ownership)) {
+    where.ownership = ownership as Prisma.EnumOwnershipStatusFilter["equals"];
   }
   if (Object.keys(mediaItemWhere).length > 0) {
     where.mediaItem = mediaItemWhere;
@@ -117,6 +123,7 @@ export async function POST(request: Request) {
         userId,
         mediaItemId: mediaItem.id,
         status: data.status ?? "PLAN_TO_WATCH",
+        ownership: data.ownership ?? "OWNED",
         platform: data.platform ?? null,
       },
       include: catalogEntryInclude,

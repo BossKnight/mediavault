@@ -4,6 +4,7 @@ import Image from "next/image";
 import { StarRating } from "@/components/ui/star-rating";
 import { StatusBadge } from "@/features/catalog/status-badge";
 import { CoverArt } from "@/features/catalog/cover-art";
+import { Badge } from "@/components/ui/badge";
 import type { CatalogEntry } from "@/types/media";
 
 interface CatalogItemCardProps {
@@ -38,7 +39,11 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
           />
         )}
         <div className="absolute right-2 top-2">
-          <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
+          {entry.ownership === "WISHLIST" ? (
+            <Badge>Wishlist</Badge>
+          ) : (
+            <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
+          )}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
@@ -46,7 +51,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
         <p className="text-xs text-muted-foreground">
           {mediaItem.releaseDate?.slice(0, 4) ?? "Unknown year"}
         </p>
-        <StarRating value={entry.rating} readOnly className="mt-1" />
+        {entry.ownership === "OWNED" && <StarRating value={entry.rating} readOnly className="mt-1" />}
       </div>
     </button>
   );

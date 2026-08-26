@@ -21,6 +21,14 @@ export const WATCH_STATUS_LABELS: Record<WatchStatus, string> = {
   DROPPED: "Dropped",
 };
 
+/** Whether the user owns a title or just wants to — a separate axis from WatchStatus. */
+export type OwnershipStatus = "OWNED" | "WISHLIST";
+
+export const OWNERSHIP_STATUS_LABELS: Record<OwnershipStatus, string> = {
+  OWNED: "Owned",
+  WISHLIST: "Wishlist",
+};
+
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   MOVIE: "Movie",
   TV: "TV Show",
@@ -78,6 +86,7 @@ export interface UnifiedSearchResult {
 export interface CatalogEntry {
   id: string; // UserMediaProgress id
   status: WatchStatus;
+  ownership: OwnershipStatus;
   rating: number | null;
   reviewNotes: string | null;
   ownedSeasons: number[];
