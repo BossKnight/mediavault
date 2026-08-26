@@ -1,14 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { Search } from "@/components/ui/icons";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronDown, Search } from "@/components/ui/icons";
 import {
   CATALOG_SORT_LABELS,
   MEDIA_TYPE_LABELS,
@@ -19,7 +12,7 @@ import {
 } from "@/types/media";
 import { cn } from "@/lib/utils";
 
-const MEDIA_TYPE_FILTERS: ("ALL" | MediaType)[] = ["ALL", "MOVIE", "TV", "GAME"];
+const MEDIA_TYPE_FILTERS: ("ALL" | MediaType)[] = ["ALL", "MOVIE", "TV", "GAME", "BOOK"];
 const STATUS_FILTERS: ("ALL" | WatchStatus)[] = [
   "ALL",
   "PLAN_TO_WATCH",
@@ -35,10 +28,14 @@ interface FilterBarProps {
   onSearchChange: (value: string) => void;
   mediaType: "ALL" | MediaType;
   onMediaTypeChange: (value: "ALL" | MediaType) => void;
-  status: "ALL" | WatchStatus;
-  onStatusChange: (value: "ALL" | WatchStatus) => void;
+  // Omitted on the Wishlist page, where a consumption status isn't
+  // meaningful yet — nothing's been started.
+  status?: "ALL" | WatchStatus;
+  onStatusChange?: (value: "ALL" | WatchStatus) => void;
   sort: CatalogSort;
   onSortChange: (value: CatalogSort) => void;
+  // Wishlist also drops "rating" as a sort option, since nothing has one.
+  sortOptions?: CatalogSort[];
 }
 
 export function FilterBar({
@@ -50,6 +47,7 @@ export function FilterBar({
   onStatusChange,
   sort,
   onSortChange,
+  sortOptions = SORT_OPTIONS,
 }: FilterBarProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -71,31 +69,39 @@ export function FilterBar({
           options={MEDIA_TYPE_FILTERS}
           labelFor={(option) => (option === "ALL" ? "All types" : MEDIA_TYPE_LABELS[option])}
         />
-        <span className="h-4 w-px bg-border" aria-hidden />
-        <FilterChipGroup
-          value={status}
-          onChange={onStatusChange}
-          options={STATUS_FILTERS}
-          labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
-        />
-        <span className="h-4 w-px bg-border" aria-hidden />
+        {status !== undefined && onStatusChange && (
+          <>
+            <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
+            <FilterChipGroup
+              value={status}
+              onChange={onStatusChange}
+              options={STATUS_FILTERS}
+              labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
+            />
+          </>
+        )}
+        <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <span id="catalog-sort-label">Sort</span>
-          <Select value={sort} onValueChange={(value) => onSortChange(value as CatalogSort)}>
-            <SelectTrigger
+          {/* A native select instead of Radix here: this is the one Select
+              usage that renders eagerly on every catalog/wishlist visit
+              rather than inside an on-demand modal, so it's worth the
+              small amount of native-picker styling it gives up. */}
+          <div className="relative">
+            <select
               aria-labelledby="catalog-sort-label"
-              className="h-7 w-auto gap-1 rounded-full border-border bg-transparent px-2.5 py-0 text-xs font-medium text-foreground"
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value as CatalogSort)}
+              className="focus-ring h-7 appearance-none rounded-full border border-border bg-transparent py-0 pl-2.5 pr-6 text-xs font-medium text-foreground"
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option} value={option}>
+              {sortOptions.map((option) => (
+                <option key={option} value={option}>
                   {CATALOG_SORT_LABELS[option]}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
         </div>
       </div>
     </div>

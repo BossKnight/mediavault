@@ -4,14 +4,19 @@ import Image from "next/image";
 import { StarRating } from "@/components/ui/star-rating";
 import { StatusBadge } from "@/features/catalog/status-badge";
 import { CoverArt } from "@/features/catalog/cover-art";
+import { Badge } from "@/components/ui/badge";
 import type { CatalogEntry } from "@/types/media";
 
 interface CatalogItemCardProps {
   entry: CatalogEntry;
   onSelect: (entry: CatalogEntry) => void;
+  // Set for the first visible row of cards so Next eagerly fetches (and
+  // hints as high fetch-priority) whichever of them is likely this page's
+  // LCP element. Left false for the rest, which stay lazy as normal.
+  priority?: boolean;
 }
 
-export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
+export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardProps) {
   const { mediaItem } = entry;
 
   return (
@@ -28,6 +33,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
             fill
             sizes="(min-width: 1024px) 200px, (min-width: 640px) 33vw, 45vw"
             className="object-cover transition-transform group-hover:scale-[1.02]"
+            priority={priority}
           />
         ) : (
           <CoverArt
@@ -38,7 +44,11 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
           />
         )}
         <div className="absolute right-2 top-2">
-          <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
+          {entry.ownership === "WISHLIST" ? (
+            <Badge>Wishlist</Badge>
+          ) : (
+            <StatusBadge status={entry.status} mediaType={mediaItem.mediaType} />
+          )}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
@@ -46,7 +56,7 @@ export function CatalogItemCard({ entry, onSelect }: CatalogItemCardProps) {
         <p className="text-xs text-muted-foreground">
           {mediaItem.releaseDate?.slice(0, 4) ?? "Unknown year"}
         </p>
-        <StarRating value={entry.rating} readOnly className="mt-1" />
+        {entry.ownership === "OWNED" && <StarRating value={entry.rating} readOnly className="mt-1" />}
       </div>
     </button>
   );

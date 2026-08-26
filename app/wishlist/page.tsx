@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/session";
 import { fetchCatalogPage, fetchCatalogStats, type CatalogQueryParams } from "@/lib/catalog-query";
-import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
-import { CatalogView } from "@/features/catalog/catalog-view";
+import { readMediaTypeParam, readSortParam } from "@/lib/catalog-params";
+import { WishlistView } from "@/features/wishlist/wishlist-view";
 import { AppHeader } from "@/features/navigation/app-header";
 
-interface CatalogPageProps {
+interface WishlistPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
@@ -14,23 +14,24 @@ function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+export default async function WishlistPage({ searchParams }: WishlistPageProps) {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/login");
 
   const sp = await searchParams;
   const params: CatalogQueryParams = {
-    ownership: "OWNED",
-    status: readStatusParam(firstValue(sp.status)),
+    ownership: "WISHLIST",
     mediaType: readMediaTypeParam(firstValue(sp.type)),
     q: firstValue(sp.q)?.trim() || undefined,
     sort: readSortParam(firstValue(sp.sort)),
   };
 
-  // Fetched together, not chained — neither depends on the other's result.
+  // Wishlist has no visible stats panel, but still needs the true total
+  // (independent of pagination) to tell "empty collection" apart from
+  // "no results under the current filter" — see WishlistView.
   const [page, stats] = await Promise.all([
     fetchCatalogPage(userId, params),
-    fetchCatalogStats(userId, "OWNED"),
+    fetchCatalogStats(userId, "WISHLIST"),
   ]);
 
   return (
@@ -39,18 +40,18 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-foreground">Your catalog</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Your wishlist</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Movies, TV shows, games, and books you own or plan to get to.
+            Movies, TV shows, games, and books you want to own next.
           </p>
         </div>
       </div>
 
       <Suspense fallback={null}>
-        <CatalogView
+        <WishlistView
           initialEntries={page.entries}
           initialNextCursor={page.nextCursor}
-          initialStats={stats}
+          initialTotal={stats.total}
         />
       </Suspense>
     </main>

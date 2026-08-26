@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader, Search } from "@/components/ui/icons";
+import { Camera, Loader, Search } from "@/components/ui/icons";
+import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import {
   Select,
   SelectContent,
@@ -16,29 +17,36 @@ import {
 } from "@/components/ui/select";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
+  BOOK_FORMATS,
   MEDIA_TYPE_LABELS,
   PHYSICAL_FORMATS,
   type CatalogEntry,
   type MediaType,
+  type OwnershipStatus,
   type UnifiedSearchResult,
 } from "@/types/media";
 
-const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME"];
+const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 // Sentinel for "no format/platform set" — Radix Select items can't use "".
 const PLATFORM_NONE = "NONE";
+
+type Step = "search" | "scan" | "confirm";
 
 interface AddItemModalProps {
   onAdded: (entry: CatalogEntry) => void;
 }
 
 /**
- * The full "Add Item" discovery flow: an autocomplete search bar against the
- * external metadata APIs, followed by a platform-picker step before the
- * selected result is saved to the catalog. New items default to "Plan to
- * Watch" (or "In Backlog" for games) — the initial status isn't asked here.
+ * The full "Add Item" discovery flow, as three steps of one dialog: search
+ * (with a "Scan barcode" entry point), scan, and confirm. Keeping the scan
+ * step inside the same Dialog instance — rather than opening a second,
+ * nested one — avoids stacking two Radix dialog overlays on top of each
+ * other. New items default to "In Backlog" (or "To Read" for books) — the
+ * initial status isn't asked here.
  */
 export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<Step>("search");
   const [mediaType, setMediaType] = useState<MediaType>("MOVIE");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 300);
@@ -47,7 +55,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
   const [platform, setPlatform] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
 
@@ -85,6 +93,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const visibleResults = trimmedQuery ? results : [];
 
   function reset() {
+    setStep("search");
     setQuery("");
     setResults([]);
     setSelected(null);
@@ -96,21 +105,47 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setRetryToken((token) => token + 1);
   }
 
+  function handleSelectResult(result: UnifiedSearchResult) {
+    setSelected(result);
+    setStep("confirm");
+  }
+
+  // A resolved barcode is treated as an unambiguous pick: it jumps straight
+  // to the confirm step instead of dropping the user into a results list,
+  // matching the "scan it and it's in your collection" point of scanning in
+  // the first place. If the code turned out to be a book's ISBN, the media
+  // type tab switches to match even if a different tab was active.
+  function handleBarcodeResults(results: UnifiedSearchResult[]) {
+    const [first] = results;
+    if (!first) return;
+    if (first.mediaType !== mediaType) {
+      setMediaType(first.mediaType);
+    }
+    setSelected(first);
+    setStep("confirm");
+  }
+
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (!next) reset();
   }
 
-  async function handleSave() {
+  async function handleSave(ownership: OwnershipStatus) {
     if (!selected) return;
-    setSaving(true);
+    setSavingAction(ownership);
     setSaveError(null);
 
     try {
       const response = await fetch("/api/catalog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...selected, platform: platform.trim() || null }),
+        body: JSON.stringify({
+          ...selected,
+          ownership,
+          // A wishlist item has no physical copy yet, so there's no format
+          // or platform to record — whatever's in the field is ignored.
+          platform: ownership === "OWNED" ? platform.trim() || null : null,
+        }),
       });
       const data = await response.json();
 
@@ -124,24 +159,28 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     } catch {
       setSaveError("Couldn't save this item. Check your connection and try again.");
     } finally {
-      setSaving(false);
+      setSavingAction(null);
     }
   }
+
+  const titleByStep: Record<Step, string> = {
+    search: "Add to your collection",
+    scan: "Scan a barcode",
+    confirm: "Add to your collection",
+  };
+  const descriptionByStep: Record<Step, string | undefined> = {
+    search: "Search movies, TV shows, games, and books to add to your collection.",
+    scan: "Scan a book's ISBN, or a movie, show, or game's barcode.",
+    confirm: undefined,
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>+ Add Item</Button>
+        <Button className="shrink-0 whitespace-nowrap">+ Add Item</Button>
       </DialogTrigger>
-      <DialogContent
-        title="Add to your collection"
-        description={
-          selected
-            ? undefined
-            : "Search movies, TV shows, and games to add to your collection."
-        }
-      >
-        {!selected ? (
+      <DialogContent title={titleByStep[step]} description={descriptionByStep[step]}>
+        {step === "search" && (
           <div className="flex flex-col gap-4">
             <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
               {MEDIA_TYPES.map((type) => (
@@ -171,6 +210,16 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                 aria-label="Search"
               />
             </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setStep("scan")}
+              className="justify-center gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Scan barcode
+            </Button>
 
             <div className="max-h-80 min-h-24 overflow-y-auto rounded-lg">
               {searching && (
@@ -208,7 +257,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   <li key={`${result.source}-${result.externalId}`}>
                     <button
                       type="button"
-                      onClick={() => setSelected(result)}
+                      onClick={() => handleSelectResult(result)}
                       className="focus-ring flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-surface-raised"
                     >
                       <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded bg-surface-raised">
@@ -234,7 +283,17 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </ul>
             </div>
           </div>
-        ) : (
+        )}
+
+        {step === "scan" && (
+          <BarcodeScannerPanel
+            mediaType={mediaType}
+            onResults={handleBarcodeResults}
+            onBack={() => setStep("search")}
+          />
+        )}
+
+        {step === "confirm" && selected && (
           <div className="flex flex-col gap-4">
             <div className="flex gap-4">
               <div className="relative h-32 w-22 shrink-0 overflow-hidden rounded-lg bg-surface-raised">
@@ -267,7 +326,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </div>
             </div>
 
-            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") ? (
+            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") && (
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-surface-foreground">Platform</span>
                 <Select
@@ -287,7 +346,31 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   </SelectContent>
                 </Select>
               </label>
-            ) : (
+            )}
+
+            {selected.mediaType === "BOOK" && (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-surface-foreground">Format</span>
+                <Select
+                  value={platform || PLATFORM_NONE}
+                  onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
+                    {BOOK_FORMATS.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+
+            {selected.mediaType === "GAME" && (
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-surface-foreground">Platform</span>
                 <Input
@@ -301,11 +384,25 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
             {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSelected(null)} disabled={saving}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSelected(null);
+                  setStep("search");
+                }}
+                disabled={savingAction !== null}
+              >
                 Back
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save to catalog"}
+              <Button
+                variant="secondary"
+                onClick={() => handleSave("WISHLIST")}
+                disabled={savingAction !== null}
+              >
+                {savingAction === "WISHLIST" ? "Saving..." : "Add to Wishlist"}
+              </Button>
+              <Button onClick={() => handleSave("OWNED")} disabled={savingAction !== null}>
+                {savingAction === "OWNED" ? "Saving..." : "Save to catalog"}
               </Button>
             </div>
           </div>

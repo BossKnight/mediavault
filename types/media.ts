@@ -2,9 +2,9 @@
 // the boundary between external metadata providers (TMDB, RAWG), the
 // database, and the UI.
 
-export type MediaType = "MOVIE" | "TV" | "GAME";
+export type MediaType = "MOVIE" | "TV" | "GAME" | "BOOK";
 
-export type MetadataSource = "TMDB" | "RAWG";
+export type MetadataSource = "TMDB" | "RAWG" | "OPENLIBRARY";
 
 export type WatchStatus =
   | "PLAN_TO_WATCH"
@@ -14,24 +14,32 @@ export type WatchStatus =
   | "DROPPED";
 
 export const WATCH_STATUS_LABELS: Record<WatchStatus, string> = {
-  PLAN_TO_WATCH: "Plan to Watch",
+  PLAN_TO_WATCH: "In Backlog",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   ON_HOLD: "On Hold",
   DROPPED: "Dropped",
 };
 
+/** Whether the user owns a title or just wants to — a separate axis from WatchStatus. */
+export type OwnershipStatus = "OWNED" | "WISHLIST";
+
+export const OWNERSHIP_STATUS_LABELS: Record<OwnershipStatus, string> = {
+  OWNED: "Owned",
+  WISHLIST: "Wishlist",
+};
+
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   MOVIE: "Movie",
   TV: "TV Show",
   GAME: "Game",
+  BOOK: "Book",
 };
 
 /**
- * Games use "In Backlog" in place of "Plan to Watch" and don't offer
- * "On Hold" at all. The underlying WatchStatus values are shared across
- * media types (no schema difference) — only the label and the set of
- * choices offered in the UI vary.
+ * Games don't offer "On Hold" at all. The underlying WatchStatus values
+ * are shared across media types (no schema difference) — only the label
+ * and the set of choices offered in the UI vary.
  */
 export function getStatusOptions(mediaType: MediaType): WatchStatus[] {
   if (mediaType === "GAME") {
@@ -40,9 +48,14 @@ export function getStatusOptions(mediaType: MediaType): WatchStatus[] {
   return ["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"];
 }
 
+// Books use their own reading-specific words ("To Read" reads more
+// naturally than "In Backlog" for a book) — every other media type shares
+// the default WATCH_STATUS_LABELS wording, including "In Backlog".
 export function getStatusLabel(status: WatchStatus, mediaType: MediaType): string {
-  if (mediaType === "GAME" && status === "PLAN_TO_WATCH") {
-    return "In Backlog";
+  if (mediaType === "BOOK") {
+    if (status === "PLAN_TO_WATCH") return "To Read";
+    if (status === "IN_PROGRESS") return "Reading";
+    if (status === "COMPLETED") return "Read";
   }
   return WATCH_STATUS_LABELS[status];
 }
@@ -53,6 +66,10 @@ export function getStatusLabel(status: WatchStatus, mediaType: MediaType): strin
  */
 export const PHYSICAL_FORMATS = ["VHS", "DVD", "Blu-Ray", "4K UHD"] as const;
 export type PhysicalFormat = (typeof PHYSICAL_FORMATS)[number];
+
+/** Physical book format, stored in the same `platform` column as above. */
+export const BOOK_FORMATS = ["Hardcover", "Paperback", "Mass Market Paperback", "Audiobook"] as const;
+export type BookFormat = (typeof BOOK_FORMATS)[number];
 
 /**
  * A single search result, normalized from whichever external provider
@@ -69,6 +86,9 @@ export interface UnifiedSearchResult {
   overview: string | null;
   genres: string[];
   creator: string | null;
+  // Book only — carried through so a barcode-scanned title round-trips
+  // straight to the catalog with its ISBN attached.
+  isbn?: string | null;
 }
 
 /**
@@ -78,6 +98,7 @@ export interface UnifiedSearchResult {
 export interface CatalogEntry {
   id: string; // UserMediaProgress id
   status: WatchStatus;
+  ownership: OwnershipStatus;
   rating: number | null;
   reviewNotes: string | null;
   ownedSeasons: number[];
@@ -99,6 +120,7 @@ export interface CatalogEntry {
     overview: string | null;
     genres: string[];
     creator: string | null;
+    isbn: string | null;
   };
 }
 

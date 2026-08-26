@@ -4,33 +4,37 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-query";
+import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
 
 const createCatalogSchema = z.object({
-  source: z.enum(["TMDB", "RAWG"]),
+  source: z.enum(["TMDB", "RAWG", "OPENLIBRARY"]),
   externalId: z.string().min(1),
-  mediaType: z.enum(["MOVIE", "TV", "GAME"]),
+  mediaType: z.enum(["MOVIE", "TV", "GAME", "BOOK"]),
   title: z.string().min(1),
   releaseDate: z.string().nullable().optional(),
   coverUrl: z.string().url().nullable().optional(),
   overview: z.string().nullable().optional(),
   genres: z.array(z.string()).optional(),
   creator: z.string().nullable().optional(),
+  isbn: z.string().max(20).nullable().optional(),
   status: z
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
+  ownership: z.enum(["OWNED", "WISHLIST"]).optional(),
   platform: z.string().max(60).nullable().optional(),
 });
 
-const VALID_STATUSES = [
-  "PLAN_TO_WATCH",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "ON_HOLD",
-  "DROPPED",
-];
-const VALID_MEDIA_TYPES = ["MOVIE", "TV", "GAME"];
+const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
 
-/** Lists the current user's catalog, with optional status / mediaType / q filters. */
+/**
+ * Lists one page of the current user's catalog, with optional status /
+ * ownership / mediaType / q filters and a choice of sort — all applied in
+ * the database, not in the client, so results stay correct and the payload
+ * stays bounded no matter how large the collection grows. Pass the
+ * previous response's `nextCursor` back as `cursor` to fetch the next
+ * page; a null `nextCursor` means there isn't one.
+ */
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -38,33 +42,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const mediaType = searchParams.get("mediaType");
-  const q = searchParams.get("q")?.trim();
+  const ownershipParam = searchParams.get("ownership");
+  const cursor = searchParams.get("cursor") ?? undefined;
 
-  const mediaItemWhere: Prisma.MediaItemWhereInput = {};
-  if (mediaType && VALID_MEDIA_TYPES.includes(mediaType)) {
-    mediaItemWhere.mediaType = mediaType as Prisma.EnumMediaTypeFilter["equals"];
-  }
-  if (q) {
-    mediaItemWhere.title = { contains: q, mode: "insensitive" };
-  }
+  const params: CatalogQueryParams = {
+    ownership: ownershipParam && VALID_OWNERSHIP.includes(ownershipParam) ? (ownershipParam as CatalogQueryParams["ownership"]) : "OWNED",
+    status: readStatusParam(searchParams.get("status")),
+    mediaType: readMediaTypeParam(searchParams.get("mediaType")),
+    q: searchParams.get("q")?.trim() || undefined,
+    sort: readSortParam(searchParams.get("sort")),
+  };
 
-  const where: Prisma.UserMediaProgressWhereInput = { userId };
-  if (status && VALID_STATUSES.includes(status)) {
-    where.status = status as Prisma.EnumWatchStatusFilter["equals"];
-  }
-  if (Object.keys(mediaItemWhere).length > 0) {
-    where.mediaItem = mediaItemWhere;
-  }
-
-  const rows = await prisma.userMediaProgress.findMany({
-    where,
-    include: catalogEntryInclude,
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return NextResponse.json({ entries: rows.map(toCatalogEntry) });
+  const page = await fetchCatalogPage(userId, params, cursor);
+  return NextResponse.json(page);
 }
 
 /**
@@ -97,6 +87,7 @@ export async function POST(request: Request) {
       overview: data.overview ?? null,
       genres: data.genres ?? [],
       creator: data.creator ?? null,
+      isbn: data.isbn ?? null,
     },
     create: {
       source: data.source,
@@ -108,6 +99,7 @@ export async function POST(request: Request) {
       overview: data.overview ?? null,
       genres: data.genres ?? [],
       creator: data.creator ?? null,
+      isbn: data.isbn ?? null,
     },
   });
 
@@ -117,6 +109,7 @@ export async function POST(request: Request) {
         userId,
         mediaItemId: mediaItem.id,
         status: data.status ?? "PLAN_TO_WATCH",
+        ownership: data.ownership ?? "OWNED",
         platform: data.platform ?? null,
       },
       include: catalogEntryInclude,

@@ -55,7 +55,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "Inter",
+          "var(--font-inter)",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
@@ -64,6 +64,14 @@ const config: Config = {
       },
       borderRadius: {
         card: "var(--radius-card)",
+      },
+      // Tailwind's built-in `aria-*` variants cover checked/disabled/
+      // expanded/hidden/pressed/readonly/required/selected, but not
+      // `invalid` — this registers it so `aria-invalid:...` utilities
+      // (e.g. Input's `aria-invalid:border-danger`) actually generate a
+      // rule instead of silently being dropped as unrecognized.
+      aria: {
+        invalid: 'invalid="true"',
       },
     },
   },
