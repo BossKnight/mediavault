@@ -3,9 +3,9 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
-import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
-import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-query";
-import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
+import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog-transforms";
+import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-db";
+import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-search-params";
 
 const createCatalogSchema = z.object({
   source: z.enum(["TMDB", "RAWG", "OPENLIBRARY"]),

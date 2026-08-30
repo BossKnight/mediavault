@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hueFromString } from "@/lib/hash";
+import { hueFromString } from "@/lib/color-hash";
 
 describe("hueFromString", () => {
   it("returns a value in the 0-359 range", () => {

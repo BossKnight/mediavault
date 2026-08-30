@@ -1,5 +1,5 @@
 import { WATCH_STATUS_LABELS, type CatalogEntry, type CatalogStats, type WatchStatus } from "@/types/media";
-import { recommendNext } from "@/lib/catalog";
+import { recommendNext } from "@/lib/catalog-transforms";
 import { CoverArt } from "@/features/catalog/cover-art";
 import { Sparkles } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";

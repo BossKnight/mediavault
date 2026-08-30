@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStats, recommendNext } from "@/lib/catalog";
+import { computeStats, recommendNext } from "@/lib/catalog-transforms";
 import type { CatalogEntry } from "@/types/media";
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {

@@ -49,7 +49,7 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
 }
 
 // Only these fields are ever read, so a stats-only Prisma query (see
-// lib/catalog-query.ts's fetchCatalogStats) can select just this narrow
+// lib/catalog-db.ts's fetchCatalogStats) can select just this narrow
 // shape rather than the full CatalogEntry — a real CatalogEntry[] still
 // satisfies this structurally, so every existing caller is unaffected.
 type StatsSourceEntry = Pick<CatalogEntry, "status" | "rating"> & {

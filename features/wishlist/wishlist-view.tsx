@@ -8,7 +8,7 @@ import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { readMediaTypeParam, readSortParam } from "@/lib/catalog-params";
+import { readMediaTypeParam, readSortParam } from "@/lib/catalog-search-params";
 import { cn } from "@/lib/utils";
 import type { CatalogEntry, CatalogSort, MediaType } from "@/types/media";
 

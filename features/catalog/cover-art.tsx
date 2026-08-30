@@ -1,5 +1,5 @@
 import { Book, Film, Gamepad, Tv } from "@/components/ui/icons";
-import { hueFromString } from "@/lib/hash";
+import { hueFromString } from "@/lib/color-hash";
 import type { MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 

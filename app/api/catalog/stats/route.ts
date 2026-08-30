@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
-import { fetchCatalogStats } from "@/lib/catalog-query";
+import { fetchCatalogStats } from "@/lib/catalog-db";
 
 /**
  * Aggregate counts for the current user's owned catalog or wishlist,

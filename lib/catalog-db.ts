@@ -8,7 +8,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { catalogEntryInclude, computeStats, toCatalogEntry } from "@/lib/catalog";
+import { catalogEntryInclude, computeStats, toCatalogEntry } from "@/lib/catalog-transforms";
 import type {
   CatalogSort,
   CatalogStats,

@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/lib/session";
-import { fetchCatalogPage, fetchCatalogStats, type CatalogQueryParams } from "@/lib/catalog-query";
-import { readMediaTypeParam, readSortParam } from "@/lib/catalog-params";
+import { fetchCatalogPage, fetchCatalogStats, type CatalogQueryParams } from "@/lib/catalog-db";
+import { readMediaTypeParam, readSortParam } from "@/lib/catalog-search-params";
 import { WishlistView } from "@/features/wishlist/wishlist-view";
 import { AppHeader } from "@/features/navigation/app-header";
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
-import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog-transforms";
 
 const updateCatalogSchema = z.object({
   status: z
