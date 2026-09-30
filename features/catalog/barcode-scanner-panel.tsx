@@ -32,7 +32,9 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resolvedRef = useRef(false);
 
-  const [cameraSupported, setCameraSupported] = useState(true);
+  // Computed once on mount: this panel only mounts after a user clicks
+  // "Scan barcode", so it never renders on the server.
+  const [cameraSupported] = useState(() => Boolean(window.BarcodeDetector));
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [looking, setLooking] = useState(false);
@@ -48,10 +50,7 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
   }
 
   useEffect(() => {
-    if (!("BarcodeDetector" in window) || !window.BarcodeDetector) {
-      setCameraSupported(false);
-      return;
-    }
+    if (!cameraSupported || !window.BarcodeDetector) return;
 
     let cancelled = false;
     const detector = new window.BarcodeDetector({ formats: BARCODE_FORMATS });
