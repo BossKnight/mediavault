@@ -5,7 +5,8 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
+    environment: "node",
+    // Component tests opt in with a `// @vitest-environment jsdom` pragma at the top of the file.
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     exclude: ["node_modules", ".next"],
