@@ -51,8 +51,8 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 300);
   const [results, setResults] = useState<UnifiedSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [settledSearchKey, setSettledSearchKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
   const [platform, setPlatform] = useState("");
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
@@ -60,13 +60,15 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [retryToken, setRetryToken] = useState(0);
 
   const trimmedQuery = debouncedQuery.trim();
+  // Identifies the search the current inputs call for. A search is in flight
+  // until a response for this exact key has settled.
+  const searchKey = `${mediaType}:${retryToken}:${trimmedQuery}`;
+  const searching = Boolean(trimmedQuery) && settledSearchKey !== searchKey;
 
   useEffect(() => {
     if (!trimmedQuery) return;
 
     const controller = new AbortController();
-    setSearching(true);
-    setSearchError(null);
 
     fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}&type=${mediaType.toLowerCase()}`, {
       signal: controller.signal,
@@ -75,18 +77,20 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
         if (!response.ok) throw new Error("Search failed");
         const data = (await response.json()) as { results: UnifiedSearchResult[] };
         setResults(data.results);
+        setSearchError(null);
+        setSettledSearchKey(searchKey);
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setSearchError("Couldn't load results. Try again.");
         setResults([]);
-      })
-      .finally(() => setSearching(false));
+        setSettledSearchKey(searchKey);
+      });
 
     return () => controller.abort();
-    // retryToken has no value of its own; bumping it re-runs this effect to
-    // replay the same search after a failure.
-  }, [trimmedQuery, mediaType, retryToken]);
+    // searchKey includes retryToken, which has no value of its own; bumping it
+    // re-runs this effect to replay the same search after a failure or reset.
+  }, [trimmedQuery, mediaType, searchKey]);
 
   // Once the query is cleared, stop showing results from the previous query
   // rather than clearing `results` itself in an effect.
@@ -96,6 +100,9 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
     setStep("search");
     setQuery("");
     setResults([]);
+    // Forces a fresh search key, so reopening with the same query refetches
+    // instead of matching the previous session's settled search.
+    setRetryToken((token) => token + 1);
     setSelected(null);
     setSaveError(null);
     setPlatform("");
