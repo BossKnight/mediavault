@@ -56,7 +56,7 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
             role="radio"
             aria-checked={value === starValue}
             aria-label={`${starValue} out of 5`}
-            className="focus-ring rounded p-0.5"
+            className="focus-ring rounded p-2 sm:p-0.5"
             onMouseEnter={() => setHovered(starValue)}
             onMouseLeave={() => setHovered(null)}
             onClick={() => onChange?.(value === starValue ? null : starValue)}

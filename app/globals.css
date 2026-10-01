@@ -81,7 +81,7 @@
       --surface-foreground: 240 20% 96%; /* 16.4:1 on --surface */
       --surface-raised: 222 14% 13%;
 
-      --border: 222 10% 20%;
+      --border: 222 10% 44%; /* 3.4:1 on --surface, 3.1:1 on --surface-raised */
 
       --muted: 222 14% 13%;
       --muted-foreground: 222 8% 66%; /* 8.0:1 on --background, 7.4:1 on --surface */
@@ -113,7 +113,7 @@
     --surface: 222 15% 9%;
     --surface-foreground: 240 20% 96%;
     --surface-raised: 222 14% 13%;
-    --border: 222 10% 20%;
+    --border: 222 10% 44%;
     --muted: 222 14% 13%;
     --muted-foreground: 222 8% 66%;
     --accent: 239 84% 73%;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import Image from "next/image";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -78,50 +78,31 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const [ownedSeasonsText, setOwnedSeasonsText] = useState(formatSeasonList(entry.ownedSeasons));
   const [platform, setPlatform] = useState(entry.platform ?? "");
   const [ownership, setOwnership] = useState<OwnershipStatus>(entry.ownership);
-  const [ownershipSaving, setOwnershipSaving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Owned/wishlist is a distinct axis from the rest of the form, so toggling
-   * it saves immediately instead of waiting for the main Save button.
-   */
-  async function handleOwnershipChange(next: OwnershipStatus) {
-    if (next === ownership || ownershipSaving) return;
-    setOwnershipSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/catalog/${entryId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownership: next }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error ?? "Couldn't update ownership.");
-        return;
-      }
-
-      setOwnership(next);
-      onUpdated(data.entry as CatalogEntry);
-    } catch {
-      setError("Couldn't update ownership. Check your connection and try again.");
-    } finally {
-      setOwnershipSaving(false);
-    }
-  }
-
   const parsedSeasons = useMemo(() => parseSeasonInput(ownedSeasonsText), [ownedSeasonsText]);
+  const hasInvalidSeasons = parsedSeasons.invalidTokens.length > 0;
+  const ownershipChanged = ownership !== entry.ownership;
+  let saveLabel = "Save changes";
+  if (ownershipChanged) saveLabel = ownership === "OWNED" ? "Move to catalog" : "Move to wishlist";
+
+  const ownershipLabelId = useId();
+  const seasonsInputId = useId();
+  const seasonsHintId = useId();
+  const seasonsErrorId = useId();
 
   async function handleSave() {
     setSaving(true);
     setError(null);
 
+    // Ownership is saved together with every other field, so switching lists
+    // never discards edits. The owned-only fields are hidden while the item
+    // is set to Wishlist but still sent, so they survive a later move back.
     const body: Record<string, unknown> = {
+      ownership,
       status,
       rating,
       reviewNotes: reviewNotes.trim() || null,
@@ -202,16 +183,22 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
           </div>
 
           <div className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-surface-foreground">Ownership</span>
-            <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+            <span id={ownershipLabelId} className="font-medium text-surface-foreground">
+              Ownership
+            </span>
+            <div
+              role="group"
+              aria-labelledby={ownershipLabelId}
+              className="flex gap-1 rounded-lg border border-border bg-surface p-1"
+            >
               {OWNERSHIP_OPTIONS.map((option) => (
                 <button
                   key={option}
                   type="button"
-                  onClick={() => handleOwnershipChange(option)}
-                  disabled={ownershipSaving}
+                  onClick={() => setOwnership(option)}
+                  disabled={saving}
                   aria-pressed={ownership === option}
-                  className={`focus-ring flex-1 rounded-md py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`focus-ring min-h-10 flex-1 rounded-md py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                     ownership === option
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:text-surface-foreground"
@@ -221,6 +208,13 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                 </button>
               ))}
             </div>
+            {ownershipChanged && (
+              <p className="text-xs text-muted-foreground">
+                {ownership === "OWNED"
+                  ? "Saving moves this to your catalog. Set its status and format below first if you like."
+                  : "Saving moves this to your wishlist."}
+              </p>
+            )}
           </div>
 
           {ownership === "OWNED" && (
@@ -259,14 +253,21 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                   </label>
 
                   {!completeSeries && (
-                    <label className="flex flex-col gap-1.5 text-sm">
-                      <span className="font-medium text-surface-foreground">Seasons owned</span>
+                    <div className="flex flex-col gap-1.5 text-sm">
+                      <label htmlFor={seasonsInputId} className="font-medium text-surface-foreground">
+                        Seasons owned
+                      </label>
                       <Input
+                        id={seasonsInputId}
                         value={ownedSeasonsText}
                         onChange={(event) => setOwnedSeasonsText(event.target.value)}
                         placeholder="e.g. 1, 2, 6"
+                        aria-describedby={
+                          hasInvalidSeasons ? `${seasonsHintId} ${seasonsErrorId}` : seasonsHintId
+                        }
+                        aria-invalid={hasInvalidSeasons ? true : undefined}
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span id={seasonsHintId} className="text-xs text-muted-foreground">
                         List the season numbers you own, separated by commas.
                       </span>
                       {parsedSeasons.seasons.length > 0 && (
@@ -278,13 +279,13 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                           ))}
                         </div>
                       )}
-                      {parsedSeasons.invalidTokens.length > 0 && (
-                        <p role="alert" className="text-xs text-danger">
+                      {hasInvalidSeasons && (
+                        <p id={seasonsErrorId} role="alert" className="text-xs text-danger">
                           Not recognized as season numbers, so they won&rsquo;t be saved:{" "}
                           {parsedSeasons.invalidTokens.join(", ")}
                         </p>
                       )}
-                    </label>
+                    </div>
                   )}
                 </div>
               )}
@@ -357,10 +358,12 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             </p>
           )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
+          <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             {confirmingDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Remove from catalog?</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Remove from your {entry.ownership === "OWNED" ? "catalog" : "wishlist"}?
+                </span>
                 <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
                   {deleting ? "Removing..." : "Confirm"}
                 </Button>
@@ -374,16 +377,19 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                 </Button>
               </div>
             ) : (
-              <Button variant="danger" size="sm" onClick={() => setConfirmingDelete(true)}>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmingDelete(true)}
+                className="self-start sm:self-auto"
+              >
                 Remove
               </Button>
             )}
 
-            {ownership === "OWNED" && (
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save changes"}
-              </Button>
-            )}
+            <Button onClick={handleSave} disabled={saving || deleting} className="w-full sm:w-auto">
+              {saving ? "Saving..." : saveLabel}
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { WATCH_STATUS_LABELS, type CatalogEntry, type CatalogStats, type WatchStatus } from "@/types/media";
 import { recommendNext } from "@/lib/catalog";
 import { CoverArt } from "@/features/catalog/cover-art";
@@ -63,11 +64,7 @@ export function StatsPanel({
           label="Avg. rating"
           value={stats.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
         />
-        <StatTile
-          label="Movies/TV/Games/Books"
-          value={`${stats.byMediaType.MOVIE} / ${stats.byMediaType.TV} / ${stats.byMediaType.GAME} / ${stats.byMediaType.BOOK}`}
-          small
-        />
+        <MediaTypeTile byMediaType={stats.byMediaType} />
       </div>
 
       {recommended.length > 0 && (
@@ -83,14 +80,19 @@ export function StatsPanel({
                   type="button"
                   onClick={() => onSelectRecommendation(entry)}
                   title={entry.mediaItem.title}
-                  className="focus-ring block h-14 w-10 overflow-hidden rounded transition-transform hover:scale-105"
+                  aria-label={entry.mediaItem.title}
+                  className="focus-ring relative block h-16 w-11 overflow-hidden rounded transition-transform hover:scale-105"
                 >
-                  <CoverArt
-                    id={entry.mediaItem.id}
-                    title={entry.mediaItem.title}
-                    mediaType={entry.mediaItem.mediaType}
-                    className="h-full w-full"
-                  />
+                  {entry.mediaItem.coverUrl ? (
+                    <Image src={entry.mediaItem.coverUrl} alt="" fill sizes="44px" className="object-cover" />
+                  ) : (
+                    <CoverArt
+                      id={entry.mediaItem.id}
+                      title={entry.mediaItem.title}
+                      mediaType={entry.mediaItem.mediaType}
+                      className="h-full w-full"
+                    />
+                  )}
                 </button>
               </li>
             ))}
@@ -106,22 +108,36 @@ const TILE_SHAPE = "min-w-[7.5rem] shrink-0 rounded-card p-3 sm:min-w-0 sm:shrin
 interface StatTileProps {
   label: string;
   value: string | number;
-  small?: boolean;
 }
 
 /** A plain, non-interactive stat with nothing behind it to click into. */
-function StatTile({ label, value, small }: StatTileProps) {
+function StatTile({ label, value }: StatTileProps) {
   return (
     <div className={cn(TILE_SHAPE, "border border-transparent")}>
-      <p
-        className={
-          small ? "text-lg font-semibold text-surface-foreground" : "text-2xl font-semibold text-surface-foreground"
-        }
-      >
-        {value}
-      </p>
+      <p className="text-2xl font-semibold text-surface-foreground">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+const MEDIA_TYPE_TILE_ROWS: { type: keyof CatalogStats["byMediaType"]; label: string }[] = [
+  { type: "MOVIE", label: "Movies" },
+  { type: "TV", label: "TV shows" },
+  { type: "GAME", label: "Games" },
+  { type: "BOOK", label: "Books" },
+];
+
+/** Per-type counts as labelled rows, rather than one "3 / 2 / 1 / 0" string. */
+function MediaTypeTile({ byMediaType }: { byMediaType: CatalogStats["byMediaType"] }) {
+  return (
+    <dl className={cn(TILE_SHAPE, "grid grid-cols-2 gap-x-3 gap-y-0.5 border border-transparent text-xs")}>
+      {MEDIA_TYPE_TILE_ROWS.map(({ type, label }) => (
+        <div key={type} className="flex items-baseline justify-between gap-1">
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="font-semibold text-surface-foreground">{byMediaType[type]}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

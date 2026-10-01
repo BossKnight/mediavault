@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,10 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
   const [loadingPage, setLoadingPage] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  // Confirms a save that landed on the other list, which this page doesn't
+  // show, so the save would otherwise look like it did nothing.
+  const [notice, setNotice] = useState<string | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
   const isFirstRun = useRef(true);
@@ -139,13 +144,13 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
   async function handleLoadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
-    setLoadError(null);
+    setLoadMoreError(null);
     try {
       const { entries: fetched, nextCursor: cursor } = await fetchPage(nextCursor);
       setEntries((current) => [...current, ...fetched]);
       setNextCursor(cursor);
     } catch {
-      setLoadError("Couldn't load more items. Try again.");
+      setLoadMoreError("Couldn't load more items.");
     } finally {
       setLoadingMore(false);
     }
@@ -155,7 +160,11 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
   // only shows wishlist entries, so an owned save doesn't touch this list
   // or count.
   function handleAdded(entry: CatalogEntry) {
-    if (entry.ownership !== "WISHLIST") return;
+    if (entry.ownership !== "WISHLIST") {
+      setNotice(`Added “${entry.mediaItem.title}” to your catalog.`);
+      return;
+    }
+    setNotice(null);
     void refetchCurrentPage();
     void refetchTotal();
   }
@@ -190,15 +199,29 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
             onSortChange={setSort}
             sortOptions={SORTS}
           />
-          <AddItemModal onAdded={handleAdded} />
+          <AddItemModal onAdded={handleAdded} primaryOwnership="WISHLIST" />
         </div>
       )}
 
       {/* Always mounted so screen readers announce changes; sr-only keeps
           it out of the layout. */}
       <p role="status" className="sr-only">
-        {hasAnyItems && loadingPage ? "Updating results..." : ""}
+        {hasAnyItems && loadingPage ? "Updating results..." : (notice ?? "")}
       </p>
+
+      {notice && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
+          <span>
+            {notice}{" "}
+            <Link href="/catalog" className="focus-ring rounded font-medium underline underline-offset-2">
+              View catalog
+            </Link>
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {hasAnyItems && loadingPage && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -225,9 +248,13 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
         <EmptyState hasAnyEntries onClearFilters={handleClearFilters} onAdded={handleAdded} />
       ) : (
         <div
+          // inert also blocks keyboard focus on cards that are about to be
+          // replaced, which pointer-events-none alone doesn't.
+          inert={loadingPage || undefined}
+          aria-busy={loadingPage}
           className={cn(
             "grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
-            loadingPage && "pointer-events-none opacity-50",
+            (loadingPage || loadError) && "opacity-50",
           )}
         >
           {entries.map((entry, index) => (
@@ -242,9 +269,14 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
       )}
 
       {hasAnyItems && nextCursor && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
+          {loadMoreError && (
+            <p role="alert" className="text-sm text-danger">
+              {loadMoreError}
+            </p>
+          )}
           <Button variant="secondary" onClick={handleLoadMore} disabled={loadingMore}>
-            {loadingMore ? "Loading..." : "Load more"}
+            {loadingMore ? "Loading..." : loadMoreError ? "Try again" : "Load more"}
           </Button>
         </div>
       )}
@@ -254,6 +286,9 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
         onClose={() => setSelectedEntry(null)}
         onUpdated={(entry) => {
           handleUpdated();
+          if (entry.ownership !== "WISHLIST") {
+            setNotice(`Moved “${entry.mediaItem.title}” to your catalog.`);
+          }
           setSelectedEntry(entry.ownership === "WISHLIST" ? entry : null);
         }}
         onDeleted={handleDeleted}
@@ -278,7 +313,7 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add Item” to save a movie, show, game, or book you want to own."}
+            : "Use “Add item” to save a movie, show, game, or book you want to own."}
         </p>
       </div>
       {hasAnyEntries ? (
@@ -286,7 +321,7 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
           Clear filters
         </Button>
       ) : (
-        <AddItemModal onAdded={onAdded} />
+        <AddItemModal onAdded={onAdded} primaryOwnership="WISHLIST" />
       )}
     </div>
   );

@@ -45,7 +45,7 @@ export function DialogContent({
             <button
               type="button"
               aria-label="Close"
-              className="focus-ring shrink-0 rounded-md p-1 text-muted-foreground hover:text-surface-foreground"
+              className="focus-ring -m-1.5 shrink-0 rounded-md p-2.5 text-muted-foreground hover:text-surface-foreground"
             >
               <X className="h-5 w-5" />
             </button>

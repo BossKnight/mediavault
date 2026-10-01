@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/icons";
@@ -38,6 +38,8 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
   const [manualCode, setManualCode] = useState("");
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [cameraState, setCameraState] = useState<"starting" | "scanning" | "stopped">("starting");
+  const manualCodeId = useId();
 
   function stopCamera() {
     if (intervalRef.current) {
@@ -48,16 +50,21 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
     streamRef.current = null;
   }
 
-  useEffect(() => {
-    if (!cameraSupported || !window.BarcodeDetector) return;
+  // Bumped whenever a camera session starts or the panel unmounts, so a
+  // getUserMedia call that resolves late (unmount, React's dev double-mount,
+  // or a newer "Scan again") can tell it's stale and release its stream.
+  const cameraSessionRef = useRef(0);
 
-    let cancelled = false;
+  function startCamera() {
+    if (!window.BarcodeDetector) return;
+
+    const session = ++cameraSessionRef.current;
     const detector = new window.BarcodeDetector({ formats: BARCODE_FORMATS });
 
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: "environment" } })
       .then((stream) => {
-        if (cancelled) {
+        if (session !== cameraSessionRef.current) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
@@ -66,6 +73,7 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
+        setCameraState("scanning");
 
         intervalRef.current = setInterval(async () => {
           if (resolvedRef.current || !videoRef.current) return;
@@ -75,27 +83,42 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
             if (code && !resolvedRef.current) {
               resolvedRef.current = true;
               stopCamera();
+              setCameraState("stopped");
               void performLookup(code);
             }
           } catch {
-            // A transient decode failure on one frame isn't worth surfacing
-            // — the loop just tries again on the next frame.
+            // A transient decode failure on one frame isn't worth surfacing;
+            // the loop just tries again on the next frame.
           }
         }, 400);
       })
       .catch(() => {
-        if (!cancelled) {
+        if (session === cameraSessionRef.current) {
           setCameraError("Camera access wasn't available. Enter the barcode number below instead.");
         }
       });
+  }
 
-    return () => {
-      cancelled = true;
-      stopCamera();
-    };
-    // Runs once per mount by design — see the component doc comment.
+  function endCameraSession() {
+    cameraSessionRef.current++;
+    stopCamera();
+  }
+
+  useEffect(() => {
+    if (cameraSupported) startCamera();
+
+    return endCameraSession;
+    // Runs once per mount by design; see the component doc comment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The camera stops once a code is read, and isn't restarted automatically
+  // after a failed lookup: it would immediately re-read the same barcode.
+  function handleScanAgain() {
+    setLookupError(null);
+    setCameraState("starting");
+    startCamera();
+  }
 
   async function performLookup(code: string) {
     setLooking(true);
@@ -144,6 +167,13 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
               Looking that up...
             </div>
           )}
+          {cameraState === "stopped" && !looking && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+              <Button type="button" variant="secondary" onClick={handleScanAgain}>
+                Scan again
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -161,12 +191,13 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
       )}
 
       <form onSubmit={handleManualSubmit} className="flex flex-col gap-2">
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-surface-foreground">
+        <div className="flex flex-col gap-1.5 text-sm">
+          <label htmlFor={manualCodeId} className="font-medium text-surface-foreground">
             Or enter the barcode number
-          </span>
+          </label>
           <div className="flex gap-2">
             <Input
+              id={manualCodeId}
               value={manualCode}
               onChange={(event) => setManualCode(event.target.value)}
               placeholder="e.g. 9780261103573"
@@ -178,7 +209,7 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
               {looking ? "Looking up..." : "Look up"}
             </Button>
           </div>
-        </label>
+        </div>
       </form>
 
       {lookupError && (

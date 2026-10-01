@@ -27,6 +27,10 @@ import {
 } from "@/types/media";
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
+const SAVE_LABELS: Record<OwnershipStatus, string> = {
+  OWNED: "Add to catalog",
+  WISHLIST: "Add to wishlist",
+};
 // Sentinel for "no format/platform set" — Radix Select items can't use "".
 const PLATFORM_NONE = "NONE";
 
@@ -34,6 +38,9 @@ type Step = "search" | "scan" | "confirm";
 
 interface AddItemModalProps {
   onAdded: (entry: CatalogEntry) => void;
+  // Which list the primary button saves to: the list the user is looking at.
+  // The other list is still offered as the secondary action.
+  primaryOwnership?: OwnershipStatus;
 }
 
 /**
@@ -44,7 +51,7 @@ interface AddItemModalProps {
  * other. New items default to "In Backlog" (or "To Read" for books) — the
  * initial status isn't asked here.
  */
-export function AddItemModal({ onAdded }: AddItemModalProps) {
+export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemModalProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("search");
   const [mediaType, setMediaType] = useState<MediaType>("MOVIE");
@@ -59,6 +66,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
 
+  const secondaryOwnership: OwnershipStatus = primaryOwnership === "OWNED" ? "WISHLIST" : "OWNED";
   const trimmedQuery = debouncedQuery.trim();
   // Identifies the search the current inputs call for. A search is in flight
   // until a response for this exact key has settled.
@@ -181,12 +189,12 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   }
 
   const titleByStep: Record<Step, string> = {
-    search: "Add to your collection",
+    search: "Add an item",
     scan: "Scan a barcode",
-    confirm: "Add to your collection",
+    confirm: "Add an item",
   };
   const descriptionByStep: Record<Step, string | undefined> = {
-    search: "Search movies, TV shows, games, and books to add to your collection.",
+    search: "Search for a movie, TV show, game, or book.",
     scan: "Scan a book's ISBN, or a movie, show, or game's barcode.",
     confirm: undefined,
   };
@@ -194,7 +202,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="shrink-0 whitespace-nowrap">+ Add Item</Button>
+        <Button className="shrink-0 whitespace-nowrap">+ Add item</Button>
       </DialogTrigger>
       <DialogContent title={titleByStep[step]} description={descriptionByStep[step]}>
         {step === "search" && (
@@ -413,7 +421,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </p>
             )}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -421,18 +429,24 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
                   setStep("search");
                 }}
                 disabled={savingAction !== null}
+                className="w-full sm:w-auto"
               >
                 Back
               </Button>
               <Button
                 variant="secondary"
-                onClick={() => handleSave("WISHLIST")}
+                onClick={() => handleSave(secondaryOwnership)}
                 disabled={savingAction !== null}
+                className="w-full sm:w-auto"
               >
-                {savingAction === "WISHLIST" ? "Saving..." : "Add to Wishlist"}
+                {savingAction === secondaryOwnership ? "Saving..." : SAVE_LABELS[secondaryOwnership]}
               </Button>
-              <Button onClick={() => handleSave("OWNED")} disabled={savingAction !== null}>
-                {savingAction === "OWNED" ? "Saving..." : "Save to catalog"}
+              <Button
+                onClick={() => handleSave(primaryOwnership)}
+                disabled={savingAction !== null}
+                className="w-full sm:w-auto"
+              >
+                {savingAction === primaryOwnership ? "Saving..." : SAVE_LABELS[primaryOwnership]}
               </Button>
             </div>
           </div>
