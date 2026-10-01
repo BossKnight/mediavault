@@ -1,8 +1,16 @@
 import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findUnique, create } = vi.hoisted(() => ({ findUnique: vi.fn(), create: vi.fn() }));
+const { findUnique, create, consumeRateLimit } = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+  create: vi.fn(),
+  consumeRateLimit: vi.fn(),
+}));
 vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique, create } } }));
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  consumeRateLimit,
+}));
 // Real bcrypt at cost 12 takes ~250ms per call; the hash itself isn't under test.
 vi.mock("bcryptjs", () => ({ default: { hash: vi.fn(async () => "hashed") } }));
 
@@ -11,7 +19,7 @@ import { POST } from "@/app/api/auth/register/route";
 function registerRequest(body: unknown) {
   return new Request("http://localhost/api/auth/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Forwarded-For": "203.0.113.7" },
     body: JSON.stringify(body),
   });
 }
@@ -19,6 +27,7 @@ function registerRequest(body: unknown) {
 const validBody = { email: "Reader@Example.com", password: "correct-horse", name: "Reader" };
 
 beforeEach(() => {
+  consumeRateLimit.mockReset().mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
   findUnique.mockReset().mockResolvedValue(null);
   create.mockReset().mockImplementation(async ({ data }) => ({ id: "user-1", email: data.email, name: data.name }));
 });
@@ -36,6 +45,23 @@ describe("POST /api/auth/register", () => {
       passwordHash: "hashed",
       name: "Reader",
     });
+  });
+
+  it("counts each attempt against the client IP", async () => {
+    await POST(registerRequest(validBody));
+
+    expect(consumeRateLimit.mock.calls[0]![0]).toBe("register:203.0.113.7");
+  });
+
+  it("returns 429 with Retry-After once the IP is over the limit, before hashing", async () => {
+    consumeRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 1800 });
+
+    const response = await POST(registerRequest(validBody));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("1800");
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid body", async () => {

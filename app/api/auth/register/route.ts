@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { clientIpFromHeaders, consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -13,6 +14,17 @@ const registerSchema = z.object({
 const DUPLICATE_EMAIL_ERROR = "An account with that email already exists";
 
 export async function POST(request: Request) {
+  const rateLimit = await consumeRateLimit(
+    `register:${clientIpFromHeaders(request.headers)}`,
+    RATE_LIMITS.register,
+  );
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many sign-up attempts. Try again later." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {

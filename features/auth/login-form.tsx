@@ -2,6 +2,7 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
+import { TOO_MANY_LOGIN_ATTEMPTS } from "@/lib/auth-errors";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,11 @@ export function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Incorrect email or password.");
+      setError(
+        result.error === TOO_MANY_LOGIN_ATTEMPTS
+          ? "Too many sign-in attempts. Wait a few minutes and try again."
+          : "Incorrect email or password.",
+      );
       setSubmitting(false);
       return;
     }

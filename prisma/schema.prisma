@@ -121,3 +121,13 @@ model UserMediaProgress {
   @@index([userId, status])
   @@index([userId, ownership])
 }
+
+// Fixed-window request counters for rate limiting (see lib/rate-limit.ts).
+// Kept in Postgres rather than process memory so every app instance shares
+// the same counts. `key` combines the action and the client, for example
+// "login:203.0.113.7" or "barcode:<userId>".
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+}

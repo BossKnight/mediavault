@@ -23,6 +23,8 @@ export async function lookupGoogleBooksByIsbn(isbn: string): Promise<UnifiedSear
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
+    // Not cached: Google's API terms only allow caching for as long as the
+    // response's cache headers permit, and Next's revalidate ignores them.
     cache: "no-store",
   });
   if (!response.ok) return null;

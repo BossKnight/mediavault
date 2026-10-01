@@ -90,3 +90,13 @@ of; this app is the multi-user, cloud-backed rebuild described below.
 - `lib/` — utilities, Prisma client, auth config, and the external API service layer
 - `types/` — shared TypeScript types
 - `prisma/` — database schema and seed script
+
+## Rate limiting
+
+Sign-up, sign-in, and barcode lookups are rate limited (see `lib/rate-limit.ts`). Counts live
+in the `RateLimit` table, so they're shared across every app instance; after pulling this
+change, run `npm run prisma:migrate` to create it.
+
+Sign-up and sign-in limits are per client IP, read from the last `X-Forwarded-For` entry. Run
+the app behind a reverse proxy or host (Vercel, nginx, Caddy) that sets that header: without
+one, clients can send any value and sidestep the per-IP limits.

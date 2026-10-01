@@ -31,7 +31,9 @@ export async function searchRawg(query: string): Promise<UnifiedSearchResult[]> 
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
-    cache: "no-store",
+    // RAWG encourages caching (the free plan is 20k requests a month), and
+    // game search results are stable. Next only caches 200 responses.
+    next: { revalidate: 60 * 60 },
   });
 
   if (!response.ok) {
