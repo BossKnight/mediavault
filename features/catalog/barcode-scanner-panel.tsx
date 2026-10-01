@@ -154,7 +154,11 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
         </p>
       )}
 
-      {cameraError && <p className="text-sm text-danger">{cameraError}</p>}
+      {cameraError && (
+        <p role="alert" className="text-sm text-danger">
+          {cameraError}
+        </p>
+      )}
 
       <form onSubmit={handleManualSubmit} className="flex flex-col gap-2">
         <label className="flex flex-col gap-1.5 text-sm">
@@ -177,7 +181,11 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
         </label>
       </form>
 
-      {lookupError && <p className="text-sm text-danger">{lookupError}</p>}
+      {lookupError && (
+        <p role="alert" className="text-sm text-danger">
+          {lookupError}
+        </p>
+      )}
 
       <Button type="button" variant="secondary" onClick={onBack} disabled={looking}>
         Back

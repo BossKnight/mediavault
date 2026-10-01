@@ -47,21 +47,29 @@ export function RegisterForm() {
 
     setSubmitting(true);
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() || undefined, email, password }),
-    });
-    const data = await response.json().catch(() => ({}));
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined, email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setError(data.error ?? "Couldn't create your account.");
+      if (!response.ok) {
+        setError(data.error ?? "Couldn't create your account.");
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
       setSubmitting(false);
       return;
     }
 
-    const result = await signIn("credentials", { email, password, redirect: false });
-    if (result?.error) {
+    // The account exists at this point, so any sign-in failure (including a
+    // network error) means "sign in manually", not "try registering again".
+    const result = await signIn("credentials", { email, password, redirect: false }).catch(() => null);
+    if (!result || result.error) {
       setError("Account created. Please sign in.");
       setSubmitting(false);
       return;

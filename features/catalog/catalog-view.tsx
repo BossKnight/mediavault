@@ -218,6 +218,12 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
             <AddItemModal onAdded={handleAdded} />
           </div>
 
+          {/* Always mounted so screen readers announce changes; sr-only keeps
+              it out of the layout. */}
+          <p role="status" className="sr-only">
+            {loadingPage ? "Updating results..." : ""}
+          </p>
+
           {loadingPage && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader className="h-3.5 w-3.5" />
@@ -226,7 +232,10 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
           )}
 
           {loadError && (
-            <div className="flex items-center justify-between gap-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               <span>{loadError}</span>
               <Button variant="secondary" size="sm" onClick={refetchCurrentPage}>
                 Retry

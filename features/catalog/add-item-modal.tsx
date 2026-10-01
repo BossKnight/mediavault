@@ -96,6 +96,16 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
   // rather than clearing `results` itself in an effect.
   const visibleResults = trimmedQuery ? results : [];
 
+  // Read by a persistent live region, since one that mounts together with
+  // its message isn't reliably announced. Errors use role="alert" instead.
+  let searchStatusMessage = "";
+  if (searching) {
+    searchStatusMessage = "Searching...";
+  } else if (trimmedQuery && !searchError) {
+    searchStatusMessage =
+      visibleResults.length === 1 ? "1 result" : `${visibleResults.length} results`;
+  }
+
   function reset() {
     setStep("search");
     setQuery("");
@@ -189,11 +199,16 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
       <DialogContent title={titleByStep[step]} description={descriptionByStep[step]}>
         {step === "search" && (
           <div className="flex flex-col gap-4">
-            <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+            <div
+              role="group"
+              aria-label="Media type"
+              className="flex gap-1 rounded-lg border border-border bg-surface p-1"
+            >
               {MEDIA_TYPES.map((type) => (
                 <button
                   key={type}
                   type="button"
+                  aria-pressed={mediaType === type}
                   onClick={() => setMediaType(type)}
                   className={`focus-ring flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
                     mediaType === type
@@ -227,6 +242,10 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               <Camera className="h-4 w-4" />
               Scan barcode
             </Button>
+
+            <p role="status" className="sr-only">
+              {searchStatusMessage}
+            </p>
 
             <div className="max-h-80 min-h-24 overflow-y-auto rounded-lg">
               {searching && (
@@ -303,7 +322,7 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
         {step === "confirm" && selected && (
           <div className="flex flex-col gap-4">
             <div className="flex gap-4">
-              <div className="relative h-32 w-22 shrink-0 overflow-hidden rounded-lg bg-surface-raised">
+              <div className="relative h-32 w-[88px] shrink-0 overflow-hidden rounded-lg bg-surface-raised">
                 {selected.coverUrl && (
                   <Image
                     src={selected.coverUrl}
@@ -388,7 +407,11 @@ export function AddItemModal({ onAdded }: AddItemModalProps) {
               </label>
             )}
 
-            {saveError && <p className="text-sm text-danger">{saveError}</p>}
+            {saveError && (
+              <p role="alert" className="text-sm text-danger">
+                {saveError}
+              </p>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button

@@ -351,7 +351,11 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             </>
           )}
 
-          {error && <p className="text-sm text-danger">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
 
           <div className="flex items-center justify-between gap-2 border-t border-border pt-4">
             {confirmingDelete ? (

@@ -21,24 +21,33 @@ export function StarRating({ value, onChange, readOnly, className }: StarRatingP
   const [hovered, setHovered] = useState<number | null>(null);
   const displayValue = hovered ?? value ?? 0;
 
+  if (readOnly) {
+    return (
+      <div className={cn("flex items-center gap-0.5", className)}>
+        <span className="sr-only">{value ? `Rated ${value} out of 5` : "Not rated"}</span>
+        {Array.from({ length: 5 }, (_, index) => (
+          <Star
+            key={index}
+            aria-hidden
+            className={cn(
+              "h-4 w-4",
+              index < displayValue ? "fill-accent text-accent" : "text-border",
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn("flex items-center gap-0.5", className)}
-      role={readOnly ? undefined : "radiogroup"}
+      role="radiogroup"
       aria-label="Rating out of 5"
     >
       {Array.from({ length: 5 }, (_, index) => {
         const starValue = index + 1;
         const filled = starValue <= displayValue;
-
-        if (readOnly) {
-          return (
-            <Star
-              key={starValue}
-              className={cn("h-4 w-4", filled ? "fill-accent text-accent" : "text-border")}
-            />
-          );
-        }
 
         return (
           <button

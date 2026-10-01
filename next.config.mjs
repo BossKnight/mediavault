@@ -4,8 +4,11 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
       { protocol: "https", hostname: "media.rawg.io" },
+      // Book covers: Open Library first, Google Books as the fallback.
+      { protocol: "https", hostname: "covers.openlibrary.org" },
+      { protocol: "https", hostname: "books.google.com" },
     ],
-    // Cover art (TMDB/RAWG) is the dominant asset on every page. AVIF isn't
+    // Cover art is the dominant asset on every page. AVIF isn't
     // served by default; it's typically 20-30% smaller than WebP at
     // comparable quality for photographic images like posters and box art.
     // Listed first so it's preferred whenever the browser supports it, with
