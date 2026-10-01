@@ -90,7 +90,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
 
   async function fetchPage(cursor: string | undefined, signal?: AbortSignal) {
     const response = await fetch(`/api/catalog?${buildFetchParams(cursor)}`, { signal });
-    if (!response.ok) throw new Error("Failed to load catalog");
+    if (!response.ok) throw new Error("Failed to load vault");
     return (await response.json()) as { entries: CatalogEntry[]; nextCursor: string | null };
   }
 
@@ -114,7 +114,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
       setEntries(fetched);
       setNextCursor(cursor);
     } catch {
-      setLoadError("Couldn't refresh your catalog. Try again.");
+      setLoadError("Couldn't refresh your vault. Try again.");
     } finally {
       setLoadingPage(false);
     }
@@ -141,7 +141,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setLoadError("Couldn't load your catalog. Try again.");
+        setLoadError("Couldn't load your vault. Try again.");
       })
       .finally(() => setLoadingPage(false));
 
@@ -334,12 +334,12 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
     <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-border py-16 text-center">
       <div className="flex flex-col items-center gap-1">
         <p className="text-sm font-medium text-foreground">
-          {hasAnyEntries ? "No items match your filters" : "Your catalog is empty"}
+          {hasAnyEntries ? "No items match your filters" : "Your vault is empty"}
         </p>
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add item” to search for a movie, show, game, or book to catalog."}
+            : "Use “Add item” to search for a movie, show, game, or book to add to your vault."}
         </p>
       </div>
       {hasAnyEntries ? (

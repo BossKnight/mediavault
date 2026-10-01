@@ -28,7 +28,7 @@ import {
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 const SAVE_LABELS: Record<OwnershipStatus, string> = {
-  OWNED: "Add to catalog",
+  OWNED: "Add to vault",
   WISHLIST: "Add to wishlist",
 };
 // Sentinel for "no format/platform set" — Radix Select items can't use "".
@@ -48,7 +48,7 @@ interface AddItemModalProps {
  * (with a "Scan barcode" entry point), scan, and confirm. Keeping the scan
  * step inside the same Dialog instance — rather than opening a second,
  * nested one — avoids stacking two Radix dialog overlays on top of each
- * other. New items default to "In Backlog" (or "To Read" for books) — the
+ * other. New items default to "In backlog" (or "To read" for books) — the
  * initial status isn't asked here.
  */
 export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemModalProps) {

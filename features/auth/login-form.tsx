@@ -69,7 +69,7 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/catalog");
+    router.push("/vault");
     router.refresh();
   }
 

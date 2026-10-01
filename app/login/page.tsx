@@ -6,7 +6,7 @@ import { Logo } from "@/components/ui/logo";
 
 export default async function LoginPage() {
   const userId = await getCurrentUserId();
-  if (userId) redirect("/catalog");
+  if (userId) redirect("/vault");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -18,7 +18,7 @@ export default async function LoginPage() {
           </span>
         </div>
         <h1 className="text-xl font-semibold text-surface-foreground">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Sign in to your MediaVault catalog.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Sign in to your vault.</p>
 
         <div className="mt-6">
           <LoginForm />

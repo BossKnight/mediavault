@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The owned-items page moved from /catalog to /vault. Keep old bookmarks
+  // and links working.
+  async redirects() {
+    return [{ source: "/catalog", destination: "/vault", permanent: true }];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },

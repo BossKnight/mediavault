@@ -79,7 +79,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.push("/catalog");
+    router.push("/vault");
     router.refresh();
   }
 

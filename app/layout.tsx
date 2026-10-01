@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-int
 
 export const metadata: Metadata = {
   title: "MediaVault",
-  description: "Catalog your movies, TV shows, games, and books in one place.",
+  description: "Keep your movies, TV shows, games, and books in one vault.",
 };
 
 // Applies a persisted light/dark choice (see ThemeToggle) before first

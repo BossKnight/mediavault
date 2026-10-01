@@ -14,10 +14,10 @@ export type WatchStatus =
   | "DROPPED";
 
 export const WATCH_STATUS_LABELS: Record<WatchStatus, string> = {
-  PLAN_TO_WATCH: "In Backlog",
-  IN_PROGRESS: "In Progress",
+  PLAN_TO_WATCH: "In backlog",
+  IN_PROGRESS: "In progress",
   COMPLETED: "Completed",
-  ON_HOLD: "On Hold",
+  ON_HOLD: "On hold",
   DROPPED: "Dropped",
 };
 
@@ -31,13 +31,13 @@ export const OWNERSHIP_STATUS_LABELS: Record<OwnershipStatus, string> = {
 
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   MOVIE: "Movie",
-  TV: "TV Show",
+  TV: "TV show",
   GAME: "Game",
   BOOK: "Book",
 };
 
 /**
- * Games don't offer "On Hold" at all. The underlying WatchStatus values
+ * Games don't offer "On hold" at all. The underlying WatchStatus values
  * are shared across media types (no schema difference) — only the label
  * and the set of choices offered in the UI vary.
  */
@@ -48,12 +48,12 @@ export function getStatusOptions(mediaType: MediaType): WatchStatus[] {
   return ["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"];
 }
 
-// Books use their own reading-specific words ("To Read" reads more
-// naturally than "In Backlog" for a book) — every other media type shares
-// the default WATCH_STATUS_LABELS wording, including "In Backlog".
+// Books use their own reading-specific words ("To read" reads more
+// naturally than "In backlog" for a book) — every other media type shares
+// the default WATCH_STATUS_LABELS wording, including "In backlog".
 export function getStatusLabel(status: WatchStatus, mediaType: MediaType): string {
   if (mediaType === "BOOK") {
-    if (status === "PLAN_TO_WATCH") return "To Read";
+    if (status === "PLAN_TO_WATCH") return "To read";
     if (status === "IN_PROGRESS") return "Reading";
     if (status === "COMPLETED") return "Read";
   }

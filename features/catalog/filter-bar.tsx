@@ -57,9 +57,9 @@ export function FilterBar({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Filter your catalog..."
+          placeholder="Filter by title..."
           className="pl-9"
-          aria-label="Filter your catalog"
+          aria-label="Filter by title"
         />
       </div>
 
@@ -112,7 +112,7 @@ export function FilterBar({
 }
 
 // Books use their own wording for three statuses (see getStatusLabel), so
-// the filter shows both, e.g. "In Backlog / To Read", to match every card.
+// the filter shows both, e.g. "In backlog / To read", to match every card.
 function statusFilterLabel(status: WatchStatus): string {
   const bookLabel = getStatusLabel(status, "BOOK");
   const defaultLabel = WATCH_STATUS_LABELS[status];

@@ -6,7 +6,7 @@ import { Logo } from "@/components/ui/logo";
 
 export default async function RegisterPage() {
   const userId = await getCurrentUserId();
-  if (userId) redirect("/catalog");
+  if (userId) redirect("/vault");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -18,7 +18,7 @@ export default async function RegisterPage() {
           </span>
         </div>
         <h1 className="text-xl font-semibold text-surface-foreground">Create your account</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Start cataloging your collection.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Start building your vault.</p>
 
         <div className="mt-6">
           <RegisterForm />

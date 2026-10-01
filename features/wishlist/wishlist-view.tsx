@@ -156,12 +156,12 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
     }
   }
 
-  // "Add Item" can also save straight to the owned catalog — this page
+  // "Add item" can also save straight to the vault, and this page
   // only shows wishlist entries, so an owned save doesn't touch this list
   // or count.
   function handleAdded(entry: CatalogEntry) {
     if (entry.ownership !== "WISHLIST") {
-      setNotice(`Added “${entry.mediaItem.title}” to your catalog.`);
+      setNotice(`Added “${entry.mediaItem.title}” to your vault.`);
       return;
     }
     setNotice(null);
@@ -213,8 +213,8 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
           <span>
             {notice}{" "}
-            <Link href="/catalog" className="focus-ring rounded font-medium underline underline-offset-2">
-              View catalog
+            <Link href="/vault" className="focus-ring rounded font-medium underline underline-offset-2">
+              View vault
             </Link>
           </span>
           <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
@@ -287,7 +287,7 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
         onUpdated={(entry) => {
           handleUpdated();
           if (entry.ownership !== "WISHLIST") {
-            setNotice(`Moved “${entry.mediaItem.title}” to your catalog.`);
+            setNotice(`Moved “${entry.mediaItem.title}” to your vault.`);
           }
           setSelectedEntry(entry.ownership === "WISHLIST" ? entry : null);
         }}

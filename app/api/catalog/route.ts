@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         {
-          error: "This title is already in your catalog",
+          error: "This title is already in your vault",
           entry: existing ? toCatalogEntry(existing) : null,
         },
         { status: 409 },

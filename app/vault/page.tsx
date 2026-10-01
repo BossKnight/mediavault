@@ -39,7 +39,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-foreground">Your catalog</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Your vault</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Movies, TV shows, games, and books you own.
           </p>

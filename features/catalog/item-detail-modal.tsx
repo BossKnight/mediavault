@@ -87,7 +87,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const hasInvalidSeasons = parsedSeasons.invalidTokens.length > 0;
   const ownershipChanged = ownership !== entry.ownership;
   let saveLabel = "Save changes";
-  if (ownershipChanged) saveLabel = ownership === "OWNED" ? "Move to catalog" : "Move to wishlist";
+  if (ownershipChanged) saveLabel = ownership === "OWNED" ? "Move to vault" : "Move to wishlist";
 
   const ownershipLabelId = useId();
   const seasonsInputId = useId();
@@ -211,7 +211,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             {ownershipChanged && (
               <p className="text-xs text-muted-foreground">
                 {ownership === "OWNED"
-                  ? "Saving moves this to your catalog. Set its status and format below first if you like."
+                  ? "Saving moves this to your vault. Set its status and format below first if you like."
                   : "Saving moves this to your wishlist."}
               </p>
             )}
@@ -362,7 +362,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             {confirmingDelete ? (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground">
-                  Remove from your {entry.ownership === "OWNED" ? "catalog" : "wishlist"}?
+                  Remove from your {entry.ownership === "OWNED" ? "vault" : "wishlist"}?
                 </span>
                 <Button variant="danger" size="sm" onClick={handleDelete} disabled={deleting}>
                   {deleting ? "Removing..." : "Confirm"}

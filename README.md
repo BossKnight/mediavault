@@ -1,6 +1,6 @@
 # MediaVault
 
-Catalog your movies, TV shows, games, and books in one place. Search TMDB, RAWG, and Open
+Keep your movies, TV shows, games, and books in one vault. Search TMDB, RAWG, and Open
 Library to add titles — or scan a barcode — then track status, rating, and progress per user.
 
 See [`SPEC.md`](./SPEC.md) for the original single-user, self-hosted concept this app grew out
@@ -8,11 +8,11 @@ of; this app is the multi-user, cloud-backed rebuild described below.
 
 ## Features
 
-- **Catalog** — movies, TV shows, games, and books, each with per-user status, rating, notes,
+- **Vault** — movies, TV shows, games, and books, each with per-user status, rating, notes,
   and progress (seasons owned, hours played, and so on).
 - **Wishlist** — track what you want to own separately from what you already do, on its own
-  page; promote an item to your catalog in one click whenever you pick it up.
-- **Recommendations** — a "try next" strip on the catalog page suggests plan-to-watch titles in
+  page; move an item to your vault from its detail view whenever you pick it up.
+- **Recommendations** — a "try next" strip on the vault page suggests plan-to-watch titles in
   the genres you rate highest.
 - **Barcode / ISBN scanning** — scan a book's ISBN, or a movie/TV/game's barcode, with your
   phone or webcam (or just type the number in) to add it without searching by title.

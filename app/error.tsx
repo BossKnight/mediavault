@@ -24,10 +24,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button onClick={reset}>Try again</Button>
         <Link
-          href="/catalog"
+          href="/vault"
           className="focus-ring inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-muted-foreground hover:bg-surface-raised hover:text-foreground"
         >
-          Go to your catalog
+          Go to your vault
         </Link>
       </div>
     </main>
