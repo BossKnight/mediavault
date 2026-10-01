@@ -86,8 +86,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
 
   /**
    * Owned/wishlist is a distinct axis from the rest of the form, so toggling
-   * it saves immediately instead of waiting for the main Save button — the
-   * same instant-action pattern the demo and SPEC.md both describe.
+   * it saves immediately instead of waiting for the main Save button.
    */
   async function handleOwnershipChange(next: OwnershipStatus) {
     if (next === ownership || ownershipSaving) return;
@@ -131,8 +130,9 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
       body.completeSeries = completeSeries;
       body.ownedSeasons = completeSeries ? [] : parsedSeasons.seasons;
     }
-    // Movies and TV store their physical format (VHS/DVD/Blu-Ray/4K UHD) and
-    // games their platform (PS5, PC, Switch...) in the same `platform` field.
+    // Movies and TV store their physical format (VHS/DVD/Blu-Ray/4K UHD),
+    // books their format (Hardcover, Paperback...), and games their platform
+    // (PS5, PC, Switch...) in the same `platform` field.
     body.platform = platform.trim() || null;
 
     try {

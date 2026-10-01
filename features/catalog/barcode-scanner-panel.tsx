@@ -19,10 +19,9 @@ interface BarcodeScannerPanelProps {
 
 /**
  * The camera/manual-entry barcode scan step. Rendered as a step inside
- * AddItemModal's single dialog rather than its own nested Dialog — two
- * stacked Radix dialogs would each render a full-screen overlay, and the
- * two would visibly compound. AddItemModal mounts this fresh each time
- * the step is entered and unmounts it on leaving, so "start the camera on
+ * AddItemModal's single dialog rather than its own nested Dialog (see
+ * AddItemModal for why). AddItemModal mounts this fresh each time the
+ * step is entered and unmounts it on leaving, so "start the camera on
  * mount, stop it on unmount" is this component's whole lifecycle — no
  * open/close prop needed.
  */

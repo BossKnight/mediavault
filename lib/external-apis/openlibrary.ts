@@ -17,8 +17,7 @@ class OpenLibraryApiError extends Error {
 
 /**
  * Searches Open Library by title/author and returns normalized results.
- * No API key required — this is the one provider in the app that doesn't
- * need one.
+ * No API key required.
  */
 export async function searchOpenLibrary(query: string): Promise<UnifiedSearchResult[]> {
   const url = new URL(`${OPEN_LIBRARY_BASE_URL}/search.json`);

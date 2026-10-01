@@ -34,7 +34,7 @@ interface FilterBarProps {
   onStatusChange?: (value: "ALL" | WatchStatus) => void;
   sort: CatalogSort;
   onSortChange: (value: CatalogSort) => void;
-  // Wishlist also drops "rating" as a sort option, since nothing has one.
+  // Defaults to every sort; the Wishlist page passes a narrower list.
   sortOptions?: CatalogSort[];
 }
 

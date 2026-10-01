@@ -27,9 +27,8 @@ const ItemDetailModal = dynamic(
   { ssr: false },
 );
 
-// The first visible row of cover art at the widest grid breakpoint (6
-// columns) gets `priority`, an eager-fetch hint for whichever of them is
-// this page's LCP element.
+// One row at the widest grid breakpoint (6 columns); see CatalogItemCard's
+// `priority` prop.
 const PRIORITY_ROW_SIZE = 6;
 
 interface CatalogViewProps {
@@ -59,8 +58,8 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Debounce only the URL write, not the filtering itself, so the URL
-  // stays shareable without churning on every keystroke.
+  // Debounced so neither the URL nor the server fetch churns on every
+  // keystroke.
   const debouncedSearch = useDebouncedValue(search, 300);
   const isFirstRun = useRef(true);
 
@@ -116,13 +115,10 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
     }
   }
 
-  // Server-side filtering/sorting keeps results correct no matter how
-  // large the collection is — client-side filtering only ever sees
-  // whichever page happens to be loaded, which stops being "the whole
-  // catalog" once there's more than one page. Every change here re-fetches
-  // page one from the server. The very first run is skipped: the server
-  // component already fetched the matching first page for whatever the
-  // URL asked for.
+  // Filtering and sorting run on the server (see lib/catalog-query.ts), so
+  // every change here re-fetches page one. The very first run is skipped:
+  // the server component already fetched the matching first page for
+  // whatever the URL asked for.
   useEffect(() => {
     if (isFirstRun.current) {
       isFirstRun.current = false;

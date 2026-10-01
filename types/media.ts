@@ -1,6 +1,6 @@
 // Shared types for the unified media model. These are the shapes that cross
-// the boundary between external metadata providers (TMDB, RAWG), the
-// database, and the UI.
+// the boundary between external metadata providers (TMDB, RAWG, Open
+// Library), the database, and the UI.
 
 export type MediaType = "MOVIE" | "TV" | "GAME" | "BOOK";
 
