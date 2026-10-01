@@ -6,6 +6,7 @@ import {
   CATALOG_SORT_LABELS,
   MEDIA_TYPE_LABELS,
   WATCH_STATUS_LABELS,
+  getStatusLabel,
   type CatalogSort,
   type MediaType,
   type WatchStatus,
@@ -34,7 +35,7 @@ interface FilterBarProps {
   onStatusChange?: (value: "ALL" | WatchStatus) => void;
   sort: CatalogSort;
   onSortChange: (value: CatalogSort) => void;
-  // Wishlist also drops "rating" as a sort option, since nothing has one.
+  // Defaults to every sort; the Wishlist page passes a narrower list.
   sortOptions?: CatalogSort[];
 }
 
@@ -56,14 +57,15 @@ export function FilterBar({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Filter your catalog..."
+          placeholder="Filter by title..."
           className="pl-9"
-          aria-label="Filter your catalog"
+          aria-label="Filter by title"
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <FilterChipGroup
+          label="Media type"
           value={mediaType}
           onChange={onMediaTypeChange}
           options={MEDIA_TYPE_FILTERS}
@@ -73,10 +75,11 @@ export function FilterBar({
           <>
             <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
             <FilterChipGroup
+              label="Status"
               value={status}
               onChange={onStatusChange}
               options={STATUS_FILTERS}
-              labelFor={(option) => (option === "ALL" ? "All statuses" : WATCH_STATUS_LABELS[option])}
+              labelFor={(option) => (option === "ALL" ? "All statuses" : statusFilterLabel(option))}
             />
           </>
         )}
@@ -92,7 +95,7 @@ export function FilterBar({
               aria-labelledby="catalog-sort-label"
               value={sort}
               onChange={(event) => onSortChange(event.target.value as CatalogSort)}
-              className="focus-ring h-7 appearance-none rounded-full border border-border bg-transparent py-0 pl-2.5 pr-6 text-xs font-medium text-foreground"
+              className="focus-ring h-10 appearance-none sm:h-7 rounded-full border border-border bg-transparent py-0 pl-2.5 pr-6 text-xs font-medium text-foreground"
             >
               {sortOptions.map((option) => (
                 <option key={option} value={option}>
@@ -108,7 +111,16 @@ export function FilterBar({
   );
 }
 
+// Books use their own wording for three statuses (see getStatusLabel), so
+// the filter shows both, e.g. "In backlog / To read", to match every card.
+function statusFilterLabel(status: WatchStatus): string {
+  const bookLabel = getStatusLabel(status, "BOOK");
+  const defaultLabel = WATCH_STATUS_LABELS[status];
+  return bookLabel === defaultLabel ? defaultLabel : `${defaultLabel} / ${bookLabel}`;
+}
+
 interface FilterChipGroupProps<T extends string> {
+  label: string;
   value: T;
   onChange: (value: T) => void;
   options: T[];
@@ -116,13 +128,14 @@ interface FilterChipGroupProps<T extends string> {
 }
 
 function FilterChipGroup<T extends string>({
+  label,
   value,
   onChange,
   options,
   labelFor,
 }: FilterChipGroupProps<T>) {
   return (
-    <div className="flex flex-wrap gap-1.5" role="group">
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
       {options.map((option) => (
         <button
           key={option}
@@ -130,7 +143,7 @@ function FilterChipGroup<T extends string>({
           onClick={() => onChange(option)}
           aria-pressed={value === option}
           className={cn(
-            "focus-ring rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "focus-ring inline-flex min-h-10 items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors sm:min-h-0",
             value === option
               ? "border-accent bg-accent-muted text-accent-muted-foreground"
               : "border-border text-muted-foreground hover:text-foreground",

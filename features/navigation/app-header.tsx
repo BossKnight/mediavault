@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/features/navigation/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/catalog", label: "Catalog" },
+  { href: "/vault", label: "Vault" },
   { href: "/wishlist", label: "Wishlist" },
 ];
 

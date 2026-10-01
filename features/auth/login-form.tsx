@@ -45,13 +45,21 @@ export function LoginForm() {
 
     setSubmitting(true);
 
+    // signIn's own request throws on a network failure rather than
+    // resolving with an error, which would leave the button stuck.
     const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
-    });
+    }).catch(() => null);
 
-    if (result?.error) {
+    if (!result) {
+      setError("Couldn't reach the server. Check your connection and try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (result.error) {
       setError(
         result.error === TOO_MANY_LOGIN_ATTEMPTS
           ? "Too many sign-in attempts. Wait a few minutes and try again."
@@ -61,7 +69,7 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/catalog");
+    router.push("/vault");
     router.refresh();
   }
 

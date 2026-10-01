@@ -48,10 +48,9 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
   };
 }
 
-// Only these fields are ever read, so a stats-only Prisma query (see
-// lib/catalog-query.ts's fetchCatalogStats) can select just this narrow
-// shape rather than the full CatalogEntry — a real CatalogEntry[] still
-// satisfies this structurally, so every existing caller is unaffected.
+// The only fields computeStats reads, so fetchCatalogStats
+// (lib/catalog-query.ts) can select just these. A full CatalogEntry also
+// satisfies this shape.
 type StatsSourceEntry = Pick<CatalogEntry, "status" | "rating"> & {
   mediaItem: Pick<CatalogEntry["mediaItem"], "mediaType">;
 };
@@ -98,10 +97,7 @@ export function computeStats(entries: StatsSourceEntry[]): CatalogStats {
  * something worth trying next.
  *
  * Note: this only sees whatever page(s) of the catalog are currently
- * loaded in the client (see catalog-view.tsx) — with the catalog now
- * paginated, that's the same honest "not exhaustive" tradeoff the
- * function already made about being a real recommendation engine, just
- * extended to cover collections larger than one page too.
+ * loaded in the client (see catalog-view.tsx), not the whole collection.
  */
 export function recommendNext(entries: CatalogEntry[]): CatalogEntry[] {
   const genreScore = new Map<string, { sum: number; count: number }>();

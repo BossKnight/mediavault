@@ -2,6 +2,7 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,9 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the account was created but automatic sign-in didn't work. Not
+  // an error: the account exists, so it's styled as information.
+  const [accountCreated, setAccountCreated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const emailErrorId = useId();
   const passwordErrorId = useId();
@@ -47,27 +51,35 @@ export function RegisterForm() {
 
     setSubmitting(true);
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() || undefined, email, password }),
-    });
-    const data = await response.json().catch(() => ({}));
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined, email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      setError(data.error ?? "Couldn't create your account.");
+      if (!response.ok) {
+        setError(data.error ?? "Couldn't create your account.");
+        setSubmitting(false);
+        return;
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
       setSubmitting(false);
       return;
     }
 
-    const result = await signIn("credentials", { email, password, redirect: false });
-    if (result?.error) {
-      setError("Account created. Please sign in.");
+    // The account exists at this point, so any sign-in failure (including a
+    // network error) means "sign in manually", not "try registering again".
+    const result = await signIn("credentials", { email, password, redirect: false }).catch(() => null);
+    if (!result || result.error) {
+      setAccountCreated(true);
       setSubmitting(false);
       return;
     }
 
-    router.push("/catalog");
+    router.push("/vault");
     router.refresh();
   }
 
@@ -129,6 +141,15 @@ export function RegisterForm() {
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}
+        </p>
+      )}
+
+      {accountCreated && (
+        <p role="status" className="text-sm text-surface-foreground">
+          Your account is ready.{" "}
+          <Link href="/login" className="focus-ring rounded font-medium text-accent underline underline-offset-2">
+            Sign in to continue
+          </Link>
         </p>
       )}
 

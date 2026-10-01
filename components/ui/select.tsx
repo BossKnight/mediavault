@@ -15,7 +15,7 @@ export function SelectTrigger({
   return (
     <RadixSelect.Trigger
       className={cn(
-        "focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-surface-foreground data-[placeholder]:text-muted-foreground",
+        "focus-ring flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-surface-foreground transition-colors hover:border-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground",
         className,
       )}
       {...props}

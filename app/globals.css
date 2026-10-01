@@ -12,11 +12,10 @@
 
   Mechanism: a "root class toggle". <html> can carry a `.light` or `.dark`
   class to force a theme; with neither class present, the theme follows
-  the OS's `prefers-color-scheme` automatically. Both paths are pure CSS —
-  the correct theme is already resolved by the time the first pixel paints,
-  with no script required on initial load. A theme switcher can be added
-  later (toggle the class on <html>, persist the choice) without touching
-  this file's structure.
+  the OS's `prefers-color-scheme` automatically, in pure CSS with no script
+  required on initial load. ThemeToggle (features/navigation/theme-toggle.tsx)
+  sets the class and persists the choice, and app/layout.tsx re-applies a
+  stored choice before first paint.
 
   Precedence, low to high:
     1. :root                                   - light values (the default
@@ -82,7 +81,7 @@
       --surface-foreground: 240 20% 96%; /* 16.4:1 on --surface */
       --surface-raised: 222 14% 13%;
 
-      --border: 222 10% 20%;
+      --border: 222 10% 44%; /* 3.4:1 on --surface, 3.1:1 on --surface-raised */
 
       --muted: 222 14% 13%;
       --muted-foreground: 222 8% 66%; /* 8.0:1 on --background, 7.4:1 on --surface */
@@ -114,7 +113,7 @@
     --surface: 222 15% 9%;
     --surface-foreground: 240 20% 96%;
     --surface-raised: 222 14% 13%;
-    --border: 222 10% 20%;
+    --border: 222 10% 44%;
     --muted: 222 14% 13%;
     --muted-foreground: 222 8% 66%;
     --accent: 239 84% 73%;

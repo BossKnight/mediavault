@@ -1,6 +1,6 @@
-// Pure functions that turn a raw TMDB or RAWG payload into a
-// UnifiedSearchResult. Kept dependency-free (no fetch, no env access) so they
-// are trivial to unit test.
+// Pure functions that turn a raw TMDB, RAWG, Open Library, or Google Books
+// payload into a UnifiedSearchResult. Kept dependency-free (no fetch, no env
+// access) so they are trivial to unit test.
 
 import type { UnifiedSearchResult } from "@/types/media";
 import type {

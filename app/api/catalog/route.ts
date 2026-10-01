@@ -29,11 +29,10 @@ const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
 
 /**
  * Lists one page of the current user's catalog, with optional status /
- * ownership / mediaType / q filters and a choice of sort — all applied in
- * the database, not in the client, so results stay correct and the payload
- * stays bounded no matter how large the collection grows. Pass the
- * previous response's `nextCursor` back as `cursor` to fetch the next
- * page; a null `nextCursor` means there isn't one.
+ * ownership / mediaType / q filters and a choice of sort, all applied in
+ * the database (see lib/catalog-query.ts). Pass the previous response's
+ * `nextCursor` back as `cursor` to fetch the next page; a null
+ * `nextCursor` means there isn't one.
  */
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -123,7 +122,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         {
-          error: "This title is already in your catalog",
+          error: "This title is already in your vault",
           entry: existing ? toCatalogEntry(existing) : null,
         },
         { status: 409 },

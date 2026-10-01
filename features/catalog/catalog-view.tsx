@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { StatsPanel } from "@/features/catalog/stats-panel";
@@ -27,9 +28,8 @@ const ItemDetailModal = dynamic(
   { ssr: false },
 );
 
-// The first visible row of cover art at the widest grid breakpoint (6
-// columns) gets `priority`, an eager-fetch hint for whichever of them is
-// this page's LCP element.
+// One row at the widest grid breakpoint (6 columns); see CatalogItemCard's
+// `priority` prop.
 const PRIORITY_ROW_SIZE = 6;
 
 interface CatalogViewProps {
@@ -58,9 +58,13 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
   const [loadingPage, setLoadingPage] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  // Confirms a save that landed on the other list, which this page doesn't
+  // show, so the save would otherwise look like it did nothing.
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // Debounce only the URL write, not the filtering itself, so the URL
-  // stays shareable without churning on every keystroke.
+  // Debounced so neither the URL nor the server fetch churns on every
+  // keystroke.
   const debouncedSearch = useDebouncedValue(search, 300);
   const isFirstRun = useRef(true);
 
@@ -86,7 +90,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
 
   async function fetchPage(cursor: string | undefined, signal?: AbortSignal) {
     const response = await fetch(`/api/catalog?${buildFetchParams(cursor)}`, { signal });
-    if (!response.ok) throw new Error("Failed to load catalog");
+    if (!response.ok) throw new Error("Failed to load vault");
     return (await response.json()) as { entries: CatalogEntry[]; nextCursor: string | null };
   }
 
@@ -110,19 +114,16 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
       setEntries(fetched);
       setNextCursor(cursor);
     } catch {
-      setLoadError("Couldn't refresh your catalog. Try again.");
+      setLoadError("Couldn't refresh your vault. Try again.");
     } finally {
       setLoadingPage(false);
     }
   }
 
-  // Server-side filtering/sorting keeps results correct no matter how
-  // large the collection is — client-side filtering only ever sees
-  // whichever page happens to be loaded, which stops being "the whole
-  // catalog" once there's more than one page. Every change here re-fetches
-  // page one from the server. The very first run is skipped: the server
-  // component already fetched the matching first page for whatever the
-  // URL asked for.
+  // Filtering and sorting run on the server (see lib/catalog-query.ts), so
+  // every change here re-fetches page one. The very first run is skipped:
+  // the server component already fetched the matching first page for
+  // whatever the URL asked for.
   useEffect(() => {
     if (isFirstRun.current) {
       isFirstRun.current = false;
@@ -140,7 +141,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setLoadError("Couldn't load your catalog. Try again.");
+        setLoadError("Couldn't load your vault. Try again.");
       })
       .finally(() => setLoadingPage(false));
 
@@ -151,13 +152,13 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
   async function handleLoadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
-    setLoadError(null);
+    setLoadMoreError(null);
     try {
       const { entries: fetched, nextCursor: cursor } = await fetchPage(nextCursor);
       setEntries((current) => [...current, ...fetched]);
       setNextCursor(cursor);
     } catch {
-      setLoadError("Couldn't load more items. Try again.");
+      setLoadMoreError("Couldn't load more items.");
     } finally {
       setLoadingMore(false);
     }
@@ -169,7 +170,11 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
   // refreshes both rather than guessing whether it belongs under the
   // active filters.
   function handleAdded(entry: CatalogEntry) {
-    if (entry.ownership !== "OWNED") return;
+    if (entry.ownership !== "OWNED") {
+      setNotice(`Added “${entry.mediaItem.title}” to your wishlist.`);
+      return;
+    }
+    setNotice(null);
     void refetchCurrentPage();
     void refetchStats();
   }
@@ -222,6 +227,26 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
             <AddItemModal onAdded={handleAdded} />
           </div>
 
+          {/* Always mounted so screen readers announce changes; sr-only keeps
+              it out of the layout. */}
+          <p role="status" className="sr-only">
+            {loadingPage ? "Updating results..." : (notice ?? "")}
+          </p>
+
+          {notice && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
+              <span>
+                {notice}{" "}
+                <Link href="/wishlist" className="focus-ring rounded font-medium underline underline-offset-2">
+                  View wishlist
+                </Link>
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
+                Dismiss
+              </Button>
+            </div>
+          )}
+
           {loadingPage && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader className="h-3.5 w-3.5" />
@@ -230,7 +255,10 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
           )}
 
           {loadError && (
-            <div className="flex items-center justify-between gap-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               <span>{loadError}</span>
               <Button variant="secondary" size="sm" onClick={refetchCurrentPage}>
                 Retry
@@ -242,9 +270,13 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
             <EmptyState hasAnyEntries onClearFilters={handleClearFilters} onAdded={handleAdded} />
           ) : (
             <div
+              // inert also blocks keyboard focus on cards that are about to be
+              // replaced, which pointer-events-none alone doesn't.
+              inert={loadingPage || undefined}
+              aria-busy={loadingPage}
               className={cn(
                 "grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
-                loadingPage && "pointer-events-none opacity-50",
+                (loadingPage || loadError) && "opacity-50",
               )}
             >
               {entries.map((entry, index) => (
@@ -259,9 +291,14 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
           )}
 
           {nextCursor && (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-2">
+              {loadMoreError && (
+                <p role="alert" className="text-sm text-danger">
+                  {loadMoreError}
+                </p>
+              )}
               <Button variant="secondary" onClick={handleLoadMore} disabled={loadingMore}>
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore ? "Loading..." : loadMoreError ? "Try again" : "Load more"}
               </Button>
             </div>
           )}
@@ -275,6 +312,9 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
         onClose={() => setSelectedEntry(null)}
         onUpdated={(entry) => {
           handleUpdated();
+          if (entry.ownership !== "OWNED") {
+            setNotice(`Moved “${entry.mediaItem.title}” to your wishlist.`);
+          }
           setSelectedEntry(entry.ownership === "OWNED" ? entry : null);
         }}
         onDeleted={handleDeleted}
@@ -294,12 +334,12 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
     <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-border py-16 text-center">
       <div className="flex flex-col items-center gap-1">
         <p className="text-sm font-medium text-foreground">
-          {hasAnyEntries ? "No items match your filters" : "Your catalog is empty"}
+          {hasAnyEntries ? "No items match your filters" : "Your vault is empty"}
         </p>
         <p className="text-sm text-muted-foreground">
           {hasAnyEntries
             ? "Try clearing a filter or searching for something else."
-            : "Use “Add Item” to search for a movie, show, game, or book to catalog."}
+            : "Use “Add item” to search for a movie, show, game, or book to add to your vault."}
         </p>
       </div>
       {hasAnyEntries ? (

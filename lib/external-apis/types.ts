@@ -1,6 +1,6 @@
-// Minimal shapes for the slices of the TMDB and RAWG payloads we actually
-// use. These are intentionally partial — we only declare the fields the
-// normalizer reads, not the full API response.
+// Minimal shapes for the slices of the TMDB, RAWG, Open Library, and Google
+// Books payloads we actually use. These are intentionally partial: we only
+// declare the fields the normalizer reads, not the full API response.
 
 export interface TmdbMovieResult {
   id: number;
