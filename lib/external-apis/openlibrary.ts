@@ -27,7 +27,9 @@ export async function searchOpenLibrary(query: string): Promise<UnifiedSearchRes
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
-    cache: "no-store",
+    // Open Library asks clients to cache whenever possible. Next only
+    // caches 200 responses.
+    next: { revalidate: 60 * 60 },
   });
 
   if (!response.ok) {
@@ -57,7 +59,9 @@ export async function lookupIsbn(isbn: string): Promise<UnifiedSearchResult | nu
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
-    cache: "no-store",
+    // An ISBN's edition data almost never changes, so this can live longer
+    // than search results.
+    next: { revalidate: 24 * 60 * 60 },
   });
 
   if (!response.ok) {

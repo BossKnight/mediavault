@@ -35,9 +35,10 @@ export async function searchTmdb(
 
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
-    // Search results change often enough that caching isn't worth the
-    // staleness risk for a "what's out there right now" flow.
-    cache: "no-store",
+    // Results for a given query rarely change within an hour, and repeat
+    // searches (retyping, other users) are common. TMDB's terms allow
+    // caching for up to six months. Next only caches 200 responses.
+    next: { revalidate: 60 * 60 },
   });
 
   if (!response.ok) {

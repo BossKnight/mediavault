@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
+import { consumeRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { isIsbn } from "@/lib/isbn";
 import { lookupIsbn } from "@/lib/external-apis/openlibrary";
 import { lookupUpc } from "@/lib/external-apis/upcitemdb";
@@ -30,6 +31,14 @@ export async function GET(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimit = await consumeRateLimit(`barcode:${userId}`, RATE_LIMITS.barcode);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "You've scanned a lot of barcodes recently. Try again later, or search by title." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const { searchParams } = new URL(request.url);
