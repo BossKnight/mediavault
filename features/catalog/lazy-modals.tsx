@@ -68,12 +68,16 @@ export function AddItemButton({ onAdded, onOpenExisting, primaryOwnership }: Add
   return (
     <>
       {draft && !open && (
-        // Its own row below the toolbar on phones (the parent row wraps),
-        // before the button from sm up.
-        <div className="order-last flex w-full min-w-0 items-center rounded-full border border-border bg-surface text-sm sm:order-none sm:w-auto">
+        // Below lg it gets a row of its own under the toolbar (the toolbar
+        // wraps while it's there); from lg up it sits before the button.
+        // The max width caps how wide a long title can make the toolbar.
+        <div
+          data-add-draft
+          className="order-last flex w-full min-w-0 items-center rounded-full border border-border bg-surface text-sm sm:max-w-[16rem] lg:order-none lg:w-auto"
+        >
           <button
             type="button"
-            className="focus-ring min-w-0 flex-1 truncate rounded-l-full py-1.5 pl-3 pr-1 text-left sm:max-w-[16rem] text-surface-foreground hover:underline"
+            className="focus-ring min-w-0 flex-1 truncate rounded-l-full py-1.5 pl-3 pr-1 text-left text-surface-foreground hover:underline"
             onPointerEnter={preloadAddItemModal}
             onFocus={preloadAddItemModal}
             onClick={() => openDialog(draft)}
