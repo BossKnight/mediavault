@@ -1,9 +1,9 @@
 "use client";
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type AnimationEvent, type RefObject, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonState } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -30,6 +30,10 @@ const SAVE_LABELS: Record<OwnershipStatus, string> = {
   WISHLIST: "Add to wishlist",
 };
 type Step = "search" | "scan" | "confirm" | "added";
+// How long the save button shows its check before the dialog moves on to
+// the confirmation: long enough to see it drawn (260 ms), short enough not
+// to wait on it.
+const SUCCESS_HOLD_MS = 320;
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -104,7 +108,12 @@ export function AddItemModal({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(draft?.result ?? null);
   const [platforms, setPlatforms] = useState<string[]>(draft?.platforms ?? []);
+  // The save button that was pressed, and its look: loading while saving,
+  // success for a moment after, error (a shake) when the input was rejected.
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
+  const [saveState, setSaveState] = useState<ButtonState>("idle");
+  const saving = saveState === "loading" || saveState === "success";
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The user's existing entry for the selected title, when saving found one.
   const [existingEntry, setExistingEntry] = useState<CatalogEntry | null>(null);
@@ -205,6 +214,10 @@ export function AddItemModal({
   }
 
   function reset() {
+    if (successTimer.current) clearTimeout(successTimer.current);
+    successTimer.current = null;
+    setSavingAction(null);
+    setSaveState("idle");
     setStep("search");
     setQuery("");
     // Reopening, or "Add another", searches afresh rather than reusing
@@ -250,8 +263,9 @@ export function AddItemModal({
   }
 
   async function handleSave(ownership: OwnershipStatus) {
-    if (!selected) return;
+    if (!selected || saving) return;
     setSavingAction(ownership);
+    setSaveState("loading");
     setSaveError(null);
     setExistingEntry(null);
 
@@ -270,6 +284,11 @@ export function AddItemModal({
       const data = await response.json();
 
       if (!response.ok) {
+        // Shake only for input the user can fix. A duplicate, an expired
+        // session or a server error isn't their mistake.
+        const fixable = response.status === 400;
+        setSaveState(fixable ? "error" : "idle");
+        if (!fixable) setSavingAction(null);
         setSaveError(apiErrorMessage(response, data, "Couldn't save this item."));
         if (response.status === 409 && data.entry) {
           setExistingEntry(data.entry as CatalogEntry);
@@ -282,10 +301,29 @@ export function AddItemModal({
       clearAddDraft();
       onAdded(data.entry as CatalogEntry);
       setAdded(data.entry as CatalogEntry);
-      setStep("added");
+      setSaveState("success");
+      if (typeof navigator !== "undefined") navigator.vibrate?.(10);
+      successTimer.current = setTimeout(() => {
+        successTimer.current = null;
+        setSavingAction(null);
+        setSaveState("idle");
+        setStep("added");
+      }, SUCCESS_HOLD_MS);
     } catch {
+      setSavingAction(null);
+      setSaveState("idle");
       setSaveError("Couldn't save this item. Check your connection and try again.");
-    } finally {
+    }
+  }
+
+  // Only the button that was pressed shows a state.
+  const stateFor = (ownership: OwnershipStatus): ButtonState =>
+    savingAction === ownership ? saveState : "idle";
+
+  function handleSaveAnimationEnd(event: AnimationEvent<HTMLButtonElement>) {
+    // The shake has finished (the spinner's spin never ends).
+    if (event.target === event.currentTarget && saveState === "error") {
+      setSaveState("idle");
       setSavingAction(null);
     }
   }
@@ -308,8 +346,15 @@ export function AddItemModal({
     : "";
   // One live region for the whole dialog, always mounted so changes to it
   // are announced (a region that mounts with its message often isn't).
-  const statusMessage =
-    step === "added" ? addedMessage : step === "search" ? searchStatusMessage : "";
+  // On the confirm step it follows the save: "Saving..." while the spinner
+  // shows, then the added message with the check, which the "added" step
+  // keeps, so it's announced once.
+  let statusMessage = "";
+  if (step === "added" || saveState === "success") statusMessage = addedMessage;
+  else if (step === "search") statusMessage = searchStatusMessage;
+  else if (step === "confirm" && saveState === "loading" && selected) {
+    statusMessage = `Saving “${selected.title}”...`;
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -512,7 +557,7 @@ export function AddItemModal({
             />
 
             {saveError && (
-              <ErrorMessage message={saveError}>
+              <ErrorMessage message={saveError} className="motion-safe:animate-rise">
                 {existingEntry && onOpenExisting && (
                   <Button
                     variant="secondary"
@@ -538,25 +583,31 @@ export function AddItemModal({
                   setStep("search");
                   clearAddDraft();
                 }}
-                disabled={savingAction !== null}
+                // Not `disabled` while saving: that would pull focus off the
+                // pressed button. These just ignore clicks until it's done.
+                aria-disabled={saving || undefined}
                 className="w-full sm:w-auto"
               >
                 Back
               </Button>
               <Button
                 variant="secondary"
+                state={stateFor(secondaryOwnership)}
                 onClick={() => handleSave(secondaryOwnership)}
-                disabled={savingAction !== null}
+                onAnimationEnd={handleSaveAnimationEnd}
+                aria-disabled={(saving && savingAction !== secondaryOwnership) || undefined}
                 className="w-full sm:w-auto"
               >
-                {savingAction === secondaryOwnership ? "Saving..." : SAVE_LABELS[secondaryOwnership]}
+                {SAVE_LABELS[secondaryOwnership]}
               </Button>
               <Button
+                state={stateFor(primaryOwnership)}
                 onClick={() => handleSave(primaryOwnership)}
-                disabled={savingAction !== null}
+                onAnimationEnd={handleSaveAnimationEnd}
+                aria-disabled={(saving && savingAction !== primaryOwnership) || undefined}
                 className="w-full sm:w-auto"
               >
-                {savingAction === primaryOwnership ? "Saving..." : SAVE_LABELS[primaryOwnership]}
+                {SAVE_LABELS[primaryOwnership]}
               </Button>
             </div>
           </div>
