@@ -97,7 +97,13 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
-  const where = { source_externalId: { source: data.source, externalId: data.externalId } };
+  const where = {
+    source_mediaType_externalId: {
+      source: data.source,
+      mediaType: data.mediaType,
+      externalId: data.externalId,
+    },
+  };
   let mediaItem = await prisma.mediaItem.findUnique({ where });
 
   if (!mediaItem) {

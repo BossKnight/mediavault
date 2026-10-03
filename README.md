@@ -107,6 +107,13 @@ can't be reached or isn't configured when a new title is added, the search resul
 instead, and only for that new title. A title is re-fetched when someone adds it after 30 days,
 or on demand with **Refresh details** in its dialog (rate limited per user).
 
+### Upgrading: titles are keyed by media type
+
+TMDB numbers movies and TV shows separately, so a title is now identified by source, media type
+and id (`@@unique([source, mediaType, externalId])`). After pulling this change, run
+`npm run prisma:migrate`. Prisma warns that adding a unique constraint fails if duplicates
+exist; answer yes. None can exist, since the old key (source and id only) was stricter.
+
 ## Rate limiting
 
 Sign-up, sign-in, barcode lookups, and title refreshes are rate limited (see `lib/rate-limit.ts`). Counts live

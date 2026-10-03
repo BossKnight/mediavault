@@ -78,8 +78,10 @@ model MediaItem {
 
   progress UserMediaProgress[]
 
-  // The same external title should never be stored twice.
-  @@unique([source, externalId])
+  // The same external title should never be stored twice. mediaType is part
+  // of the key because TMDB numbers movies and TV shows separately: movie 1399
+  // and show 1399 are different titles with the same source and id.
+  @@unique([source, mediaType, externalId])
   @@index([mediaType])
 }
 

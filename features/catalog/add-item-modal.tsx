@@ -277,7 +277,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
 
               <ul className="flex flex-col gap-1">
                 {visibleResults.map((result) => (
-                  <li key={`${result.source}-${result.externalId}`}>
+                  <li key={`${result.source}-${result.mediaType}-${result.externalId}`}>
                     <button
                       type="button"
                       onClick={() => handleSelectResult(result)}
@@ -350,7 +350,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
             </div>
 
             <PlatformField
-              key={`${selected.source}:${selected.externalId}`}
+              key={`${selected.source}:${selected.mediaType}:${selected.externalId}`}
               mediaType={selected.mediaType}
               value={platforms}
               onChange={setPlatforms}

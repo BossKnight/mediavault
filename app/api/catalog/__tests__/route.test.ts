@@ -114,6 +114,15 @@ describe("POST /api/catalog", () => {
     expect(update).toEqual({});
   });
 
+  it("looks titles up by media type too, so a TMDB movie and show with the same id stay apart", async () => {
+    await POST(addRequest(validBody));
+
+    expect(mediaFindUnique.mock.calls[0]![0].where).toEqual({
+      source_mediaType_externalId: { source: "RAWG", mediaType: "GAME", externalId: "5286" },
+    });
+    expect(upsert.mock.calls[0]![0].where).toEqual(mediaFindUnique.mock.calls[0]![0].where);
+  });
+
   it("rejects a title the provider doesn't have", async () => {
     lookupMediaDetails.mockResolvedValue(null);
 
