@@ -2,13 +2,12 @@
 
 import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "@/components/ui/icons";
+import { THEMES, THEME_COOKIE, type Theme, themeClass } from "@/lib/theme";
 
-const STORAGE_KEY = "mediavault-theme";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
-type Theme = "light" | "dark";
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
-// Notifies mounted toggles after a same-tab write, since the `storage` event
-// only fires in other tabs.
+// Notifies mounted toggles after a theme change in this tab.
 const themeListeners = new Set<() => void>();
 
 function subscribeToTheme(onChange: () => void) {
@@ -21,37 +20,35 @@ function subscribeToTheme(onChange: () => void) {
   };
 }
 
+// The class app/layout.tsx rendered from the cookie, or the OS preference.
 function getThemeSnapshot(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
+  const root = document.documentElement;
+  const chosen = THEMES.find((theme) => root.classList.contains(themeClass(theme)));
+  if (chosen) return chosen;
   return window.matchMedia(DARK_QUERY).matches ? "dark" : "light";
 }
 
-// localStorage isn't readable during server rendering, so the server renders
-// a placeholder and the client fills in the real theme after hydration. This
-// avoids a first-paint icon guess that might not match what app/layout.tsx's
-// inline script already applied.
+// The server can't see the OS preference, so it renders a placeholder and
+// the client fills in the real theme after hydration.
 function getServerThemeSnapshot(): Theme | null {
   return null;
 }
 
 /**
- * A manual override for the light/dark theme app/globals.css otherwise
- * picks purely from `prefers-color-scheme`. The class this toggles
- * (`.light` / `.dark` on `<html>`) is the same mechanism the CSS already
- * documents as its intended extension point — this just adds the button
- * and the persistence, nothing new at the CSS level. The matching
- * before-paint script lives in app/layout.tsx, so a stored choice never
- * flashes the other theme on load.
+ * A manual light/dark override for the theme app/globals.css otherwise
+ * picks from `prefers-color-scheme`. It swaps the `.theme-*` class on
+ * <html> and saves the choice in a cookie, which app/layout.tsx reads to
+ * render the same class on the next load, with no script before paint.
  */
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
 
   function toggle() {
     const next: Theme = getThemeSnapshot() === "dark" ? "light" : "dark";
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    const root = document.documentElement;
+    root.classList.remove(...THEMES.map(themeClass));
+    root.classList.add(themeClass(next));
+    document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax`;
     themeListeners.forEach((listener) => listener());
   }
 

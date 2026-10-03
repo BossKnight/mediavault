@@ -6,13 +6,8 @@ function themeColor(variable: string) {
 }
 
 const config: Config = {
-  darkMode: ["class"],
-  // .dark / .light are only ever applied at runtime via
-  // document.documentElement.classList (see app/globals.css) — they never
-  // appear as a literal `className` string in any scanned file, so
-  // Tailwind's content scanner can't see them as "used" and will purge the
-  // CSS rules that key off them unless they're safelisted here.
-  safelist: ["dark", "light"],
+  // Colors switch themes through the CSS custom properties in
+  // app/globals.css, so components never need `dark:` variants.
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
