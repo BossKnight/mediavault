@@ -32,11 +32,11 @@ const LazyItemDetailModal = dynamic(
 
 type AddItemButtonProps = Pick<
   ComponentProps<typeof LazyAddItemModal>,
-  "onAdded" | "primaryOwnership"
+  "onAdded" | "onOpenExisting" | "primaryOwnership"
 >;
 
 /** The "+ Add item" button, rendered on the server; the dialog loads on first use. */
-export function AddItemButton({ onAdded, primaryOwnership }: AddItemButtonProps) {
+export function AddItemButton({ onAdded, onOpenExisting, primaryOwnership }: AddItemButtonProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -63,6 +63,7 @@ export function AddItemButton({ onAdded, primaryOwnership }: AddItemButtonProps)
           onOpenChange={setOpen}
           returnFocusTo={triggerRef}
           onAdded={onAdded}
+          onOpenExisting={onOpenExisting}
           primaryOwnership={primaryOwnership}
         />
       )}

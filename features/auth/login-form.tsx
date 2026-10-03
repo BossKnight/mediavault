@@ -25,7 +25,13 @@ function validate(email: string, password: string): FieldErrors {
   return errors;
 }
 
-export function LoginForm() {
+interface LoginFormProps {
+  // Where to go once signed in. app/login/page.tsx has already checked it's
+  // a path on this site.
+  redirectTo?: string;
+}
+
+export function LoginForm({ redirectTo = "/vault" }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,7 +74,7 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/vault");
+    router.push(redirectTo);
     router.refresh();
   }
 

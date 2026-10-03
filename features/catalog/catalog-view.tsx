@@ -72,7 +72,8 @@ export function CatalogView({
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   // Confirms a save that landed on the other list, which this page doesn't
   // show, so the save would otherwise look like it did nothing.
-  const [notice, setNotice] = useState<string | null>(null);
+  // `elsewhere`: the item went to the other list, so the notice links there.
+  const [notice, setNotice] = useState<{ message: string; elsewhere: boolean } | null>(null);
 
   // Debounced so neither the URL nor the server fetch churns on every
   // keystroke.
@@ -182,7 +183,7 @@ export function CatalogView({
   // active filters.
   function handleAdded(entry: CatalogEntry) {
     if (entry.ownership !== "OWNED") {
-      setNotice(`Added “${entry.mediaItem.title}” to your wishlist.`);
+      setNotice({ message: `Added “${entry.mediaItem.title}” to your wishlist.`, elsewhere: true });
       return;
     }
     setNotice(null);
@@ -241,23 +242,28 @@ export function CatalogView({
             />
             <div className="flex items-center gap-2">
               <ViewToggle value={layout} onChange={setLayout} />
-              <AddItemButton onAdded={handleAdded} />
+              <AddItemButton onAdded={handleAdded} onOpenExisting={setSelectedEntry} />
             </div>
           </div>
 
           {/* Always mounted so screen readers announce changes; sr-only keeps
               it out of the layout. */}
           <p role="status" className="sr-only">
-            {loadingPage ? "Updating results..." : (notice ?? "")}
+            {loadingPage ? "Updating results..." : (notice?.message ?? "")}
           </p>
 
           {notice && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
               <span>
-                {notice}{" "}
-                <Link href="/wishlist" className="focus-ring rounded font-medium underline underline-offset-2">
-                  View wishlist
-                </Link>
+                {notice.message}
+                {notice.elsewhere && (
+                  <>
+                    {" "}
+                    <Link href="/wishlist" className="focus-ring rounded font-medium underline underline-offset-2">
+                      View wishlist
+                    </Link>
+                  </>
+                )}
               </span>
               <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
                 Dismiss
@@ -285,7 +291,12 @@ export function CatalogView({
           )}
 
           {entries.length === 0 && !loadingPage ? (
-            <EmptyState hasAnyEntries onClearFilters={handleClearFilters} onAdded={handleAdded} />
+            <EmptyState
+              hasAnyEntries
+              onClearFilters={handleClearFilters}
+              onAdded={handleAdded}
+              onOpenExisting={setSelectedEntry}
+            />
           ) : (
             <div
               // inert also blocks keyboard focus on items that are about to be
@@ -327,7 +338,12 @@ export function CatalogView({
           )}
         </>
       ) : (
-        <EmptyState hasAnyEntries={false} onClearFilters={handleClearFilters} onAdded={handleAdded} />
+        <EmptyState
+          hasAnyEntries={false}
+          onClearFilters={handleClearFilters}
+          onAdded={handleAdded}
+          onOpenExisting={setSelectedEntry}
+        />
       )}
 
       <ItemDetailModal
@@ -335,10 +351,17 @@ export function CatalogView({
         onClose={() => setSelectedEntry(null)}
         onUpdated={(entry) => {
           handleUpdated();
-          if (entry.ownership !== "OWNED") {
-            setNotice(`Moved “${entry.mediaItem.title}” to your wishlist.`);
+          // Compare with where the entry was: "Open it" (adding a title
+          // that's already saved) can open an entry from the other list.
+          const wasHere = selectedEntry?.ownership === "OWNED";
+          const isHere = entry.ownership === "OWNED";
+          if (wasHere !== isHere) {
+            setNotice({
+              message: `Moved “${entry.mediaItem.title}” to your ${isHere ? "vault" : "wishlist"}.`,
+              elsewhere: !isHere,
+            });
           }
-          setSelectedEntry(entry.ownership === "OWNED" ? entry : null);
+          setSelectedEntry(wasHere && !isHere ? null : entry);
         }}
         onDeleted={handleDeleted}
       />
@@ -350,9 +373,10 @@ interface EmptyStateProps {
   hasAnyEntries: boolean;
   onClearFilters: () => void;
   onAdded: (entry: CatalogEntry) => void;
+  onOpenExisting: (entry: CatalogEntry) => void;
 }
 
-function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps) {
+function EmptyState({ hasAnyEntries, onClearFilters, onAdded, onOpenExisting }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-border py-16 text-center">
       <div className="flex flex-col items-center gap-1">
@@ -370,7 +394,7 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
           Clear filters
         </Button>
       ) : (
-        <AddItemButton onAdded={onAdded} />
+        <AddItemButton onAdded={onAdded} onOpenExisting={onOpenExisting} />
       )}
     </div>
   );

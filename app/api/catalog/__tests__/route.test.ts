@@ -193,6 +193,23 @@ describe("POST /api/catalog", () => {
     expect(body.entry.platforms).toEqual(["PS2"]);
   });
 
+  it("names the wishlist when that's where the existing entry is", async () => {
+    create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+      }),
+    );
+    findUnique.mockResolvedValue(progressRow({ status: "PLAN_TO_WATCH", ownership: "WISHLIST", platforms: [] }));
+
+    const response = await POST(addRequest({ ...validBody, ownership: "WISHLIST" }));
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error).toMatch(/already on your wishlist/);
+    expect(body.entry.ownership).toBe("WISHLIST");
+  });
+
   it("rejects requests without a session", async () => {
     getCurrentUserId.mockResolvedValue(null);
 

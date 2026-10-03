@@ -164,8 +164,12 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         {
+          // Name the list the title is actually on, and say what opening it
+          // is for there.
           error:
-            "This title is already in your vault. Open it there to add another platform or format.",
+            existing?.ownership === "WISHLIST"
+              ? "This title is already on your wishlist. Open it to move it to your vault."
+              : "This title is already in your vault. Open it to add another platform or format.",
           entry: existing ? toCatalogEntry(existing) : null,
         },
         { status: 409 },

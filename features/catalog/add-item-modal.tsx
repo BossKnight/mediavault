@@ -6,10 +6,12 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { PlatformField } from "@/features/catalog/platform-field";
 import { Camera, Loader, Search } from "@/components/ui/icons";
 import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
 import {
   MEDIA_TYPE_LABELS,
   type CatalogEntry,
@@ -34,6 +36,9 @@ interface AddItemModalProps {
   // DialogTrigger would do.
   returnFocusTo: RefObject<HTMLElement | null>;
   onAdded: (entry: CatalogEntry) => void;
+  // Opens an entry the user already has, offered when they try to add it
+  // again. Without it, that error has no "Open it" button.
+  onOpenExisting?: (entry: CatalogEntry) => void;
   // Which list the primary button saves to: the list the user is looking at.
   // The other list is still offered as the secondary action.
   primaryOwnership?: OwnershipStatus;
@@ -52,6 +57,7 @@ export function AddItemModal({
   onOpenChange,
   returnFocusTo,
   onAdded,
+  onOpenExisting,
   primaryOwnership = "OWNED",
 }: AddItemModalProps) {
   const [step, setStep] = useState<Step>("search");
@@ -65,6 +71,8 @@ export function AddItemModal({
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The user's existing entry for the selected title, when saving found one.
+  const [existingEntry, setExistingEntry] = useState<CatalogEntry | null>(null);
   const [retryToken, setRetryToken] = useState(0);
 
   const secondaryOwnership: OwnershipStatus = primaryOwnership === "OWNED" ? "WISHLIST" : "OWNED";
@@ -83,7 +91,11 @@ export function AddItemModal({
       signal: controller.signal,
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error("Search failed");
+        if (!response.ok) {
+          throw new Error(
+            response.status === 401 ? SESSION_EXPIRED_MESSAGE : "Couldn't load results. Try again.",
+          );
+        }
         const data = (await response.json()) as { results: UnifiedSearchResult[] };
         setResults(data.results);
         setSearchError(null);
@@ -91,7 +103,11 @@ export function AddItemModal({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setSearchError("Couldn't load results. Try again.");
+        setSearchError(
+          error instanceof Error && error.message === SESSION_EXPIRED_MESSAGE
+            ? SESSION_EXPIRED_MESSAGE
+            : "Couldn't load results. Try again.",
+        );
         setResults([]);
         setSettledSearchKey(searchKey);
       });
@@ -124,6 +140,7 @@ export function AddItemModal({
     setRetryToken((token) => token + 1);
     setSelected(null);
     setSaveError(null);
+    setExistingEntry(null);
     setPlatforms([]);
   }
 
@@ -160,6 +177,7 @@ export function AddItemModal({
     if (!selected) return;
     setSavingAction(ownership);
     setSaveError(null);
+    setExistingEntry(null);
 
     try {
       const response = await fetch("/api/catalog", {
@@ -176,7 +194,8 @@ export function AddItemModal({
       const data = await response.json();
 
       if (!response.ok) {
-        setSaveError(data.error ?? "Couldn't save this item.");
+        setSaveError(apiErrorMessage(response, data, "Couldn't save this item."));
+        if (response.status === 409 && data.entry) setExistingEntry(data.entry as CatalogEntry);
         return;
       }
 
@@ -269,14 +288,11 @@ export function AddItemModal({
               )}
 
               {!searching && trimmedQuery && searchError && (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
-                  <p role="alert" className="text-sm text-danger">
-                    {searchError}
-                  </p>
+                <ErrorMessage message={searchError} className="items-center py-8 text-center">
                   <Button variant="secondary" size="sm" onClick={handleRetry}>
                     Try again
                   </Button>
-                </div>
+                </ErrorMessage>
               )}
 
               {!searching && !searchError && trimmedQuery && visibleResults.length === 0 && (
@@ -373,9 +389,20 @@ export function AddItemModal({
             />
 
             {saveError && (
-              <p role="alert" className="text-sm text-danger">
-                {saveError}
-              </p>
+              <ErrorMessage message={saveError}>
+                {existingEntry && onOpenExisting && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      onOpenExisting(existingEntry);
+                      handleOpenChange(false);
+                    }}
+                  >
+                    Open it
+                  </Button>
+                )}
+              </ErrorMessage>
             )}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -383,6 +410,8 @@ export function AddItemModal({
                 variant="secondary"
                 onClick={() => {
                   setSelected(null);
+                  setSaveError(null);
+                  setExistingEntry(null);
                   setStep("search");
                 }}
                 disabled={savingAction !== null}
