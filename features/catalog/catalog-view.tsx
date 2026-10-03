@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { CatalogList } from "@/features/catalog/catalog-list";
@@ -12,6 +11,13 @@ import {
   ItemDetailModal,
   preloadItemDetailModal,
 } from "@/features/catalog/lazy-modals";
+import { ListNoticeBar } from "@/features/catalog/list-notice";
+import {
+  highlightedEntryIds,
+  listNoticeMessage,
+  withAddedEntry,
+  type ListNotice,
+} from "@/lib/added-notice";
 import { StatsPanel } from "@/features/catalog/stats-panel";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
@@ -70,10 +76,10 @@ export function CatalogView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  // Confirms a save that landed on the other list, which this page doesn't
-  // show, so the save would otherwise look like it did nothing.
-  // `elsewhere`: the item went to the other list, so the notice links there.
-  const [notice, setNotice] = useState<{ message: string; elsewhere: boolean } | null>(null);
+  // Confirms adds (to either list) and moves between lists; the page's own
+  // new entries are highlighted while it shows.
+  const [notice, setNotice] = useState<ListNotice | null>(null);
+  const highlighted = highlightedEntryIds(notice, "OWNED");
 
   // Debounced so neither the URL nor the server fetch churns on every
   // keystroke.
@@ -182,11 +188,8 @@ export function CatalogView({
   // refreshes both rather than guessing whether it belongs under the
   // active filters.
   function handleAdded(entry: CatalogEntry) {
-    if (entry.ownership !== "OWNED") {
-      setNotice({ message: `Added “${entry.mediaItem.title}” to your wishlist.`, elsewhere: true });
-      return;
-    }
-    setNotice(null);
+    setNotice((current) => withAddedEntry(current, entry));
+    if (entry.ownership !== "OWNED") return;
     void refetchCurrentPage();
     void refetchStats();
   }
@@ -249,26 +252,17 @@ export function CatalogView({
           {/* Always mounted so screen readers announce changes; sr-only keeps
               it out of the layout. */}
           <p role="status" className="sr-only">
-            {loadingPage ? "Updating results..." : (notice?.message ?? "")}
+            {loadingPage ? "Updating results..." : (notice ? listNoticeMessage(notice) : "")}
           </p>
 
           {notice && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
-              <span>
-                {notice.message}
-                {notice.elsewhere && (
-                  <>
-                    {" "}
-                    <Link href="/wishlist" className="focus-ring rounded font-medium underline underline-offset-2">
-                      View wishlist
-                    </Link>
-                  </>
-                )}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
-                Dismiss
-              </Button>
-            </div>
+            <ListNoticeBar
+              notice={notice}
+              list="OWNED"
+              filters={{ q: debouncedSearch, mediaType: mediaTypeFilter, status: statusFilter }}
+              onDismiss={() => setNotice(null)}
+              onClearFilters={handleClearFilters}
+            />
           )}
 
           {loadingPage && (
@@ -310,7 +304,7 @@ export function CatalogView({
               )}
             >
               {layout === "list" ? (
-                <CatalogList entries={entries} onSelect={setSelectedEntry} />
+                <CatalogList entries={entries} onSelect={setSelectedEntry} highlightedIds={highlighted} />
               ) : (
                 entries.map((entry, index) => (
                   <CatalogItemCard
@@ -318,6 +312,7 @@ export function CatalogView({
                     entry={entry}
                     onSelect={setSelectedEntry}
                     priority={index < PRIORITY_ROW_SIZE}
+                    highlighted={highlighted.has(entry.id)}
                   />
                 ))
               )}
@@ -357,6 +352,7 @@ export function CatalogView({
           const isHere = entry.ownership === "OWNED";
           if (wasHere !== isHere) {
             setNotice({
+              kind: "moved",
               message: `Moved “${entry.mediaItem.title}” to your ${isHere ? "vault" : "wishlist"}.`,
               elsewhere: !isHere,
             });

@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { PlatformField } from "@/features/catalog/platform-field";
-import { Camera, Loader, Search } from "@/components/ui/icons";
+import { Camera, Check, Loader, Search } from "@/components/ui/icons";
 import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
+import { LIST_NAMES } from "@/lib/added-notice";
 import {
   MEDIA_TYPE_LABELS,
+  getStatusLabel,
   type CatalogEntry,
   type MediaType,
   type OwnershipStatus,
@@ -25,7 +27,7 @@ const SAVE_LABELS: Record<OwnershipStatus, string> = {
   OWNED: "Add to vault",
   WISHLIST: "Add to wishlist",
 };
-type Step = "search" | "scan" | "confirm";
+type Step = "search" | "scan" | "confirm" | "added";
 
 interface AddItemModalProps {
   // Controlled by AddItemButton (features/catalog/lazy-modals.tsx), which
@@ -45,8 +47,9 @@ interface AddItemModalProps {
 }
 
 /**
- * The full "Add Item" discovery flow, as three steps of one dialog: search
- * (with a "Scan barcode" entry point), scan, and confirm. Keeping the scan
+ * The full "Add Item" discovery flow, as steps of one dialog: search (with a
+ * "Scan barcode" entry point), scan, confirm, and a confirmation that offers
+ * "Add another", so adding several items doesn't mean reopening the dialog. Keeping the scan
  * step inside the same Dialog instance — rather than opening a second,
  * nested one — avoids stacking two Radix dialog overlays on top of each
  * other. New items default to "In backlog" (or "To read" for books) — the
@@ -73,6 +76,8 @@ export function AddItemModal({
   const [saveError, setSaveError] = useState<string | null>(null);
   // The user's existing entry for the selected title, when saving found one.
   const [existingEntry, setExistingEntry] = useState<CatalogEntry | null>(null);
+  // The entry just saved, shown on the confirmation step.
+  const [added, setAdded] = useState<CatalogEntry | null>(null);
   const [retryToken, setRetryToken] = useState(0);
 
   const secondaryOwnership: OwnershipStatus = primaryOwnership === "OWNED" ? "WISHLIST" : "OWNED";
@@ -141,6 +146,7 @@ export function AddItemModal({
     setSelected(null);
     setSaveError(null);
     setExistingEntry(null);
+    setAdded(null);
     setPlatforms([]);
   }
 
@@ -200,7 +206,8 @@ export function AddItemModal({
       }
 
       onAdded(data.entry as CatalogEntry);
-      handleOpenChange(false);
+      setAdded(data.entry as CatalogEntry);
+      setStep("added");
     } catch {
       setSaveError("Couldn't save this item. Check your connection and try again.");
     } finally {
@@ -212,12 +219,22 @@ export function AddItemModal({
     search: "Add an item",
     scan: "Scan a barcode",
     confirm: "Add an item",
+    added: "Add an item",
   };
   const descriptionByStep: Record<Step, string | undefined> = {
     search: "Search for a movie, TV show, game, or book.",
     scan: "Scan a book's ISBN, or a movie, show, or game's barcode.",
     confirm: undefined,
+    added: undefined,
   };
+
+  const addedMessage = added
+    ? `Added “${added.mediaItem.title}” to your ${LIST_NAMES[added.ownership]}.`
+    : "";
+  // One live region for the whole dialog, always mounted so changes to it
+  // are announced (a region that mounts with its message often isn't).
+  const statusMessage =
+    step === "added" ? addedMessage : step === "search" ? searchStatusMessage : "";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -229,6 +246,10 @@ export function AddItemModal({
           returnFocusTo.current?.focus();
         }}
       >
+        <p role="status" className="sr-only">
+          {statusMessage}
+        </p>
+
         {step === "search" && (
           <div className="flex flex-col gap-4">
             <div
@@ -274,10 +295,6 @@ export function AddItemModal({
               <Camera className="h-4 w-4" />
               Scan barcode
             </Button>
-
-            <p role="status" className="sr-only">
-              {searchStatusMessage}
-            </p>
 
             <div className="max-h-80 min-h-24 overflow-y-auto rounded-lg">
               {searching && (
@@ -433,6 +450,39 @@ export function AddItemModal({
                 className="w-full sm:w-auto"
               >
                 {savingAction === primaryOwnership ? "Saving..." : SAVE_LABELS[primaryOwnership]}
+              </Button>
+            </div>
+          </div>
+        )}
+        {step === "added" && added && (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                <Check className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-medium text-surface-foreground">{addedMessage}</p>
+                {/* The status it starts in, and what was recorded with it.
+                    Wishlist items show neither, here or elsewhere. */}
+                {added.ownership === "OWNED" && (
+                  <p className="text-sm text-muted-foreground">
+                    {getStatusLabel(added.status, added.mediaItem.mediaType)}
+                    {added.platforms.length > 0 && ` · ${added.platforms.join(", ")}`}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => handleOpenChange(false)}
+                className="w-full sm:w-auto"
+              >
+                Done
+              </Button>
+              {/* Keeps the media type, which is one click to change on search. */}
+              <Button autoFocus onClick={reset} className="w-full sm:w-auto">
+                Add another
               </Button>
             </div>
           </div>

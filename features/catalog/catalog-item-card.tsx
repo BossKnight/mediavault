@@ -5,6 +5,7 @@ import { StarRating } from "@/components/ui/star-rating";
 import { StatusBadge } from "@/features/catalog/status-badge";
 import { CoverArt } from "@/features/catalog/cover-art";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { CatalogEntry } from "@/types/media";
 
 // Cards are narrow, so a long platform list is cut to this many chips plus a
@@ -18,9 +19,11 @@ interface CatalogItemCardProps {
   // hints as high fetch-priority) whichever of them is likely this page's
   // LCP element. Left false for the rest, which stay lazy as normal.
   priority?: boolean;
+  // Just added: ringed while the page's "Added ..." notice shows.
+  highlighted?: boolean;
 }
 
-export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardProps) {
+export function CatalogItemCard({ entry, onSelect, priority, highlighted }: CatalogItemCardProps) {
   const { mediaItem } = entry;
   // Wishlist entries can keep platforms from when they were owned, but they
   // aren't copies on the shelf, so only owned entries show them.
@@ -32,7 +35,10 @@ export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardPr
     <button
       type="button"
       onClick={() => onSelect(entry)}
-      className="focus-ring group flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-colors hover:border-muted-foreground"
+      className={cn(
+        "focus-ring group flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-colors hover:border-muted-foreground",
+        highlighted && "border-accent ring-2 ring-accent",
+      )}
     >
       <div className="relative aspect-[2/3] w-full bg-surface-raised">
         {mediaItem.coverUrl ? (

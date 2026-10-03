@@ -95,6 +95,10 @@ const PAIRINGS: [string, string, number][] = [
   ["accent-foreground", "accent", TEXT],
   ["accent-foreground", "accent-hover", TEXT],
   ["accent-muted-foreground", "accent-muted", TEXT],
+  // Rows just added to a list are tinted accent-muted (features/catalog/catalog-list.tsx).
+  ["foreground", "accent-muted", TEXT],
+  ["surface-foreground", "accent-muted", TEXT],
+  ["muted-foreground", "accent-muted", TEXT],
   ["success-foreground", "success", TEXT],
   ["warning-foreground", "warning", TEXT],
   ["danger-foreground", "danger", TEXT],

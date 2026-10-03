@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { CatalogList } from "@/features/catalog/catalog-list";
@@ -12,6 +11,13 @@ import {
   ItemDetailModal,
   preloadItemDetailModal,
 } from "@/features/catalog/lazy-modals";
+import { ListNoticeBar } from "@/features/catalog/list-notice";
+import {
+  highlightedEntryIds,
+  listNoticeMessage,
+  withAddedEntry,
+  type ListNotice,
+} from "@/lib/added-notice";
 import { useLayoutPreference } from "@/lib/layout-preference";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
@@ -63,10 +69,10 @@ export function WishlistView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  // Confirms a save that landed on the other list, which this page doesn't
-  // show, so the save would otherwise look like it did nothing.
-  // `elsewhere`: the item went to the other list, so the notice links there.
-  const [notice, setNotice] = useState<{ message: string; elsewhere: boolean } | null>(null);
+  // Confirms adds (to either list) and moves between lists; the page's own
+  // new entries are highlighted while it shows.
+  const [notice, setNotice] = useState<ListNotice | null>(null);
+  const highlighted = highlightedEntryIds(notice, "WISHLIST");
 
   const debouncedSearch = useDebouncedValue(search, 300);
   const isFirstRun = useRef(true);
@@ -165,11 +171,8 @@ export function WishlistView({
   // only shows wishlist entries, so an owned save doesn't touch this list
   // or count.
   function handleAdded(entry: CatalogEntry) {
-    if (entry.ownership !== "WISHLIST") {
-      setNotice({ message: `Added “${entry.mediaItem.title}” to your vault.`, elsewhere: true });
-      return;
-    }
-    setNotice(null);
+    setNotice((current) => withAddedEntry(current, entry));
+    if (entry.ownership !== "WISHLIST") return;
     void refetchCurrentPage();
     void refetchTotal();
   }
@@ -222,26 +225,21 @@ export function WishlistView({
       {/* Always mounted so screen readers announce changes; sr-only keeps
           it out of the layout. */}
       <p role="status" className="sr-only">
-        {hasAnyItems && loadingPage ? "Updating results..." : (notice?.message ?? "")}
+        {hasAnyItems && loadingPage
+          ? "Updating results..."
+          : notice
+            ? listNoticeMessage(notice)
+            : ""}
       </p>
 
       {notice && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/40 bg-accent-muted px-4 py-3 text-sm text-accent-muted-foreground">
-          <span>
-            {notice.message}
-            {notice.elsewhere && (
-              <>
-                {" "}
-                <Link href="/vault" className="focus-ring rounded font-medium underline underline-offset-2">
-                  View vault
-                </Link>
-              </>
-            )}
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => setNotice(null)}>
-            Dismiss
-          </Button>
-        </div>
+        <ListNoticeBar
+          notice={notice}
+          list="WISHLIST"
+          filters={{ q: debouncedSearch, mediaType: mediaTypeFilter }}
+          onDismiss={() => setNotice(null)}
+          onClearFilters={handleClearFilters}
+        />
       )}
 
       {hasAnyItems && loadingPage && (
@@ -290,7 +288,12 @@ export function WishlistView({
           )}
         >
           {layout === "list" ? (
-            <CatalogList entries={entries} onSelect={setSelectedEntry} variant="wishlist" />
+            <CatalogList
+              entries={entries}
+              onSelect={setSelectedEntry}
+              highlightedIds={highlighted}
+              variant="wishlist"
+            />
           ) : (
             entries.map((entry, index) => (
               <CatalogItemCard
@@ -298,6 +301,7 @@ export function WishlistView({
                 entry={entry}
                 onSelect={setSelectedEntry}
                 priority={index < PRIORITY_ROW_SIZE}
+                highlighted={highlighted.has(entry.id)}
               />
             ))
           )}
@@ -328,6 +332,7 @@ export function WishlistView({
           const isHere = entry.ownership === "WISHLIST";
           if (wasHere !== isHere) {
             setNotice({
+              kind: "moved",
               message: `Moved “${entry.mediaItem.title}” to your ${isHere ? "wishlist" : "vault"}.`,
               elsewhere: !isHere,
             });
