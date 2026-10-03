@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readMediaTypeParam, readSortParam, readStatusParam, readViewParam } from "@/lib/catalog-params";
+import { readMediaTypeParam, readSortParam, readStatusParam, readLayout } from "@/lib/catalog-params";
 
 describe("readMediaTypeParam", () => {
   it.each(["MOVIE", "TV", "GAME", "BOOK"])("accepts %s", (value) => {
@@ -31,12 +31,12 @@ describe("readSortParam", () => {
   });
 });
 
-describe("readViewParam", () => {
-  it("reads the list view", () => {
-    expect(readViewParam("list")).toBe("list");
+describe("readLayout", () => {
+  it("reads the saved list layout", () => {
+    expect(readLayout("list")).toBe("list");
   });
 
   it.each([null, undefined, "", "grid", "table"])("defaults to thumbnails for %s", (value) => {
-    expect(readViewParam(value)).toBe("grid");
+    expect(readLayout(value)).toBe("grid");
   });
 });

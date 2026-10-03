@@ -16,8 +16,8 @@ import {
   readMediaTypeParam,
   readSortParam,
   readStatusParam,
-  readViewParam,
 } from "@/lib/catalog-params";
+import { useLayoutPreference } from "@/lib/layout-preference";
 import { cn } from "@/lib/utils";
 import type {
   CatalogEntry,
@@ -50,9 +50,15 @@ interface CatalogViewProps {
   initialEntries: CatalogEntry[];
   initialNextCursor: string | null;
   initialStats: CatalogStats;
+  initialLayout: CatalogLayout;
 }
 
-export function CatalogView({ initialEntries, initialNextCursor, initialStats }: CatalogViewProps) {
+export function CatalogView({
+  initialEntries,
+  initialNextCursor,
+  initialStats,
+  initialLayout,
+}: CatalogViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -68,7 +74,7 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
     () => readStatusParam(searchParams.get("status")) ?? "ALL",
   );
   const [sort, setSort] = useState<CatalogSort>(() => readSortParam(searchParams.get("sort")));
-  const [layout, setLayout] = useState<CatalogLayout>(() => readViewParam(searchParams.get("view")));
+  const [layout, setLayout] = useLayoutPreference(initialLayout);
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null);
   const [loadingPage, setLoadingPage] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -89,11 +95,10 @@ export function CatalogView({ initialEntries, initialNextCursor, initialStats }:
     if (mediaTypeFilter !== "ALL") params.set("type", mediaTypeFilter);
     if (statusFilter !== "ALL") params.set("status", statusFilter);
     if (sort !== "recent") params.set("sort", sort);
-    if (layout !== "grid") params.set("view", layout);
 
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [debouncedSearch, mediaTypeFilter, statusFilter, sort, layout, pathname, router]);
+  }, [debouncedSearch, mediaTypeFilter, statusFilter, sort, pathname, router]);
 
   function buildFetchParams(cursor?: string) {
     const params = new URLSearchParams({ ownership: "OWNED", sort });

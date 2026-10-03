@@ -26,7 +26,12 @@ export function readStatusParam(value: string | null | undefined): WatchStatus |
   return WATCH_STATUSES.includes(value as WatchStatus) ? (value as WatchStatus) : undefined;
 }
 
-export function readViewParam(value: string | null | undefined): CatalogLayout {
+// Thumbnails vs. list, shared by the vault and wishlist. Kept in a cookie
+// rather than localStorage so the server renders the chosen layout straight
+// away instead of flashing thumbnails first (see useLayoutPreference).
+export const LAYOUT_COOKIE = "mediavault-layout";
+
+export function readLayout(value: string | null | undefined): CatalogLayout {
   return value === "list" ? "list" : "grid";
 }
 
