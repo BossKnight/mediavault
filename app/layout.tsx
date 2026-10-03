@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { cookies } from "next/headers";
+import { THEME_COOKIE, readTheme, themeClass } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
 // Self-hosted by Next at build time — no external font request at runtime,
@@ -13,20 +16,13 @@ export const metadata: Metadata = {
   description: "Keep your movies, TV shows, games, and books in one vault.",
 };
 
-// Applies a persisted light/dark choice (see ThemeToggle) before first
-// paint, the same way the OS-preference path already works with zero
-// script per app/globals.css's own theming notes. Runs before hydration,
-// so `suppressHydrationWarning` on <html> below is the standard, expected
-// companion to this pattern — only the class list it touches can differ
-// between server and client markup, nothing React itself renders.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("mediavault-theme");if(t==="light"||t==="dark"){document.documentElement.classList.add(t);}}catch(e){}})();`;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // A saved theme is rendered into the markup, so the first paint is already
+  // correct with no script. Without one, app/globals.css follows the OS.
+  const theme = readTheme((await cookies()).get(THEME_COOKIE)?.value);
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
+    <html lang="en" className={cn(inter.variable, theme && themeClass(theme))}>
       <body>{children}</body>
     </html>
   );

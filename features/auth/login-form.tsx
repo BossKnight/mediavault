@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { signIn } from "next-auth/react";
 import { TOO_MANY_LOGIN_ATTEMPTS } from "@/lib/auth-errors";
+import { loadAuthClient, preloadAuthClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,13 +45,12 @@ export function LoginForm() {
 
     setSubmitting(true);
 
-    // signIn's own request throws on a network failure rather than
-    // resolving with an error, which would leave the button stuck.
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    }).catch(() => null);
+    // Loading the client, or signIn's own request, throws on a network
+    // failure rather than resolving with an error, which would leave the
+    // button stuck.
+    const result = await loadAuthClient()
+      .then(({ signIn }) => signIn("credentials", { email, password, redirect: false }))
+      .catch(() => null);
 
     if (!result) {
       setError("Couldn't reach the server. Check your connection and try again.");
@@ -74,7 +73,12 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      onFocus={preloadAuthClient}
+      noValidate
+      className="flex flex-col gap-4"
+    >
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium text-surface-foreground">Email</span>
         <Input

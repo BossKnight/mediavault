@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { CatalogList } from "@/features/catalog/catalog-list";
 import { ViewToggle } from "@/features/catalog/view-toggle";
+import {
+  AddItemButton,
+  ItemDetailModal,
+  preloadItemDetailModal,
+} from "@/features/catalog/lazy-modals";
 import { useLayoutPreference } from "@/lib/layout-preference";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
@@ -15,16 +19,6 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { readMediaTypeParam, readSortParam } from "@/lib/catalog-params";
 import { cn } from "@/lib/utils";
 import type { CatalogEntry, CatalogLayout, CatalogSort, MediaType } from "@/types/media";
-
-// Same code-splitting rationale as the catalog page: neither modal is
-// needed for the initial render.
-const AddItemModal = dynamic(() =>
-  import("@/features/catalog/add-item-modal").then((mod) => mod.AddItemModal),
-);
-const ItemDetailModal = dynamic(
-  () => import("@/features/catalog/item-detail-modal").then((mod) => mod.ItemDetailModal),
-  { ssr: false },
-);
 
 // No "rating" sort here — nothing on the wishlist has been rated yet.
 const SORTS: CatalogSort[] = ["recent", "title"];
@@ -197,7 +191,11 @@ export function WishlistView({
   const hasAnyItems = total > 0;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div
+      className="flex flex-col gap-8"
+      onPointerEnter={preloadItemDetailModal}
+      onFocus={preloadItemDetailModal}
+    >
       {hasAnyItems && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <FilterBar
@@ -211,7 +209,7 @@ export function WishlistView({
           />
           <div className="flex items-center gap-2">
             <ViewToggle value={layout} onChange={setLayout} />
-            <AddItemModal onAdded={handleAdded} primaryOwnership="WISHLIST" />
+            <AddItemButton onAdded={handleAdded} primaryOwnership="WISHLIST" />
           </div>
         </div>
       )}
@@ -339,7 +337,7 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
           Clear filters
         </Button>
       ) : (
-        <AddItemModal onAdded={onAdded} primaryOwnership="WISHLIST" />
+        <AddItemButton onAdded={onAdded} primaryOwnership="WISHLIST" />
       )}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type RefObject, useEffect, useState } from "react";
 import Image from "next/image";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,13 @@ const SAVE_LABELS: Record<OwnershipStatus, string> = {
 type Step = "search" | "scan" | "confirm";
 
 interface AddItemModalProps {
+  // Controlled by AddItemButton (features/catalog/lazy-modals.tsx), which
+  // renders the trigger so it doesn't wait on this module to load.
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  // Where focus goes when the dialog closes: the trigger, as Radix's own
+  // DialogTrigger would do.
+  returnFocusTo: RefObject<HTMLElement | null>;
   onAdded: (entry: CatalogEntry) => void;
   // Which list the primary button saves to: the list the user is looking at.
   // The other list is still offered as the secondary action.
@@ -40,8 +47,13 @@ interface AddItemModalProps {
  * other. New items default to "In backlog" (or "To read" for books) — the
  * initial status isn't asked here.
  */
-export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemModalProps) {
-  const [open, setOpen] = useState(false);
+export function AddItemModal({
+  open,
+  onOpenChange,
+  returnFocusTo,
+  onAdded,
+  primaryOwnership = "OWNED",
+}: AddItemModalProps) {
   const [step, setStep] = useState<Step>("search");
   const [mediaType, setMediaType] = useState<MediaType>("MOVIE");
   const [query, setQuery] = useState("");
@@ -140,7 +152,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
   }
 
   function handleOpenChange(next: boolean) {
-    setOpen(next);
+    onOpenChange(next);
     if (!next) reset();
   }
 
@@ -190,10 +202,14 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="shrink-0 whitespace-nowrap">+ Add item</Button>
-      </DialogTrigger>
-      <DialogContent title={titleByStep[step]} description={descriptionByStep[step]}>
+      <DialogContent
+        title={titleByStep[step]}
+        description={descriptionByStep[step]}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocusTo.current?.focus();
+        }}
+      >
         {step === "search" && (
           <div className="flex flex-col gap-4">
             <div
