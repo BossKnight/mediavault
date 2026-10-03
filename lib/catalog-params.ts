@@ -6,7 +6,7 @@
 // a UI-only sentinel like "ALL", since these feed straight into building a
 // fetch request.
 
-import type { CatalogSort, MediaType, WatchStatus } from "@/types/media";
+import type { CatalogSort, CatalogLayout, MediaType, WatchStatus } from "@/types/media";
 
 const MEDIA_TYPES: MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 const WATCH_STATUSES: WatchStatus[] = [
@@ -24,6 +24,10 @@ export function readMediaTypeParam(value: string | null | undefined): MediaType 
 
 export function readStatusParam(value: string | null | undefined): WatchStatus | undefined {
   return WATCH_STATUSES.includes(value as WatchStatus) ? (value as WatchStatus) : undefined;
+}
+
+export function readViewParam(value: string | null | undefined): CatalogLayout {
+  return value === "list" ? "list" : "grid";
 }
 
 export function readSortParam(value: string | null | undefined): CatalogSort {

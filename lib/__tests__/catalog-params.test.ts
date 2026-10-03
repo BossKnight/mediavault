@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
+import { readMediaTypeParam, readSortParam, readStatusParam, readViewParam } from "@/lib/catalog-params";
 
 describe("readMediaTypeParam", () => {
   it.each(["MOVIE", "TV", "GAME", "BOOK"])("accepts %s", (value) => {
@@ -28,5 +28,15 @@ describe("readSortParam", () => {
 
   it.each([null, undefined, "", "TITLE", "oldest"])("falls back to recent for %s", (value) => {
     expect(readSortParam(value)).toBe("recent");
+  });
+});
+
+describe("readViewParam", () => {
+  it("reads the list view", () => {
+    expect(readViewParam("list")).toBe("list");
+  });
+
+  it.each([null, undefined, "", "grid", "table"])("defaults to thumbnails for %s", (value) => {
+    expect(readViewParam(value)).toBe("grid");
   });
 });
