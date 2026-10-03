@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { PlatformField } from "@/features/catalog/platform-field";
 import { StarRating } from "@/components/ui/star-rating";
+import { Loader, Refresh } from "@/components/ui/icons";
 import { formatSeasonList, parseSeasonInput } from "@/lib/seasons";
 import {
   Select,
@@ -78,6 +79,8 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
 
   const parsedSeasons = useMemo(() => parseSeasonInput(ownedSeasonsText), [ownedSeasonsText]);
   const hasInvalidSeasons = parsedSeasons.invalidTokens.length > 0;
@@ -89,6 +92,27 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const seasonsInputId = useId();
   const seasonsHintId = useId();
   const seasonsErrorId = useId();
+
+  // Re-fetches the title's details (cover, overview...) from its provider.
+  // The rest of the form keeps any unsaved edits.
+  async function handleRefresh() {
+    setRefreshing(true);
+    setRefreshMessage(null);
+    try {
+      const response = await fetch(`/api/catalog/${entryId}/refresh`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) {
+        setRefreshMessage(data.error ?? "Couldn't refresh the details.");
+        return;
+      }
+      onUpdated(data.entry as CatalogEntry);
+      setRefreshMessage("Details updated.");
+    } catch {
+      setRefreshMessage("Couldn't refresh the details. Check your connection and try again.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -175,6 +199,27 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
               {mediaItem.overview && (
                 <p className="mt-2 line-clamp-4 text-xs text-muted-foreground">{mediaItem.overview}</p>
               )}
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={refreshing || saving}
+                  className="-ml-3"
+                >
+                  {refreshing ? (
+                    <Loader className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Refresh className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {refreshing ? "Refreshing..." : "Refresh details"}
+                </Button>
+                {/* Always mounted so the result is announced when it appears. */}
+                <p role="status" className="text-xs text-muted-foreground">
+                  {refreshMessage}
+                </p>
+              </div>
             </div>
           </div>
 

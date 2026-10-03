@@ -7,6 +7,14 @@ import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
 import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-query";
 import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
+import { lookupMediaDetails } from "@/lib/external-apis";
+import {
+  isMetadataStale,
+  metadataCreateData,
+  PROVIDER_NAMES,
+  refreshMediaItem,
+} from "@/lib/media-metadata";
+import type { UnifiedSearchResult } from "@/types/media";
 
 const createCatalogSchema = z.object({
   source: z.enum(["TMDB", "RAWG", "OPENLIBRARY"]),
@@ -69,8 +77,8 @@ export async function GET(request: Request) {
 
 /**
  * Saves a search result into the catalog: creates the shared MediaItem row
- * if it's new (an existing one is never changed), then creates the user's
- * personal progress row linking to it.
+ * from the provider's data if it's new (refreshing it if it's stale), then
+ * creates the user's personal progress row linking to it.
  */
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
@@ -89,26 +97,52 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
-  // MediaItem is shared by every user, so a request may only create it, never
-  // change it: the metadata comes from the client, and updating here would
-  // let anyone rename or re-cover a title for everyone (even on an add that
-  // is then rejected as a duplicate).
-  const mediaItem = await prisma.mediaItem.upsert({
-    where: { source_externalId: { source: data.source, externalId: data.externalId } },
-    update: {},
-    create: {
+  const where = {
+    source_mediaType_externalId: {
+      source: data.source,
+      mediaType: data.mediaType,
+      externalId: data.externalId,
+    },
+  };
+  let mediaItem = await prisma.mediaItem.findUnique({ where });
+
+  if (!mediaItem) {
+    // MediaItem is shared by every user, so it's built from the provider's
+    // own data, not the title, cover and so on the client sent.
+    let metadata: UnifiedSearchResult = {
       source: data.source,
       externalId: data.externalId,
       mediaType: data.mediaType,
       title: data.title,
-      releaseDate: data.releaseDate ? new Date(data.releaseDate) : null,
+      releaseDate: data.releaseDate ?? null,
       coverUrl: data.coverUrl ?? null,
       overview: data.overview ?? null,
       genres: data.genres ?? [],
       creator: data.creator ?? null,
       isbn: data.isbn ?? null,
-    },
-  });
+    };
+    try {
+      const fresh = await lookupMediaDetails(data);
+      if (!fresh) {
+        return NextResponse.json(
+          { error: `${PROVIDER_NAMES[data.source]} doesn't have this title. Search for it again.` },
+          { status: 400 },
+        );
+      }
+      metadata = fresh;
+    } catch (error) {
+      // The provider is down or not configured. The submitted search result
+      // is the best available, and it can only create a title here, never
+      // change one; the title is refreshed from the provider later.
+      console.warn(`Couldn't fetch ${data.source} ${data.externalId}; using the submitted details`, error);
+    }
+    // An upsert that never updates: if another request created the title
+    // in the meantime, theirs is kept.
+    mediaItem = await prisma.mediaItem.upsert({ where, update: {}, create: metadataCreateData(metadata) });
+  } else if (isMetadataStale(mediaItem)) {
+    // Best effort: an outdated title is still worth adding as-is.
+    mediaItem = (await refreshMediaItem(mediaItem).catch(() => null)) ?? mediaItem;
+  }
 
   try {
     const progress = await prisma.userMediaProgress.create({

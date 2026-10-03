@@ -13,6 +13,9 @@ export const RATE_LIMITS = {
   // UPCitemdb's free tier allows 100 lookups a day per server IP, shared by
   // every user, so one heavy scanner shouldn't be able to spend it all.
   barcode: { limit: 30, windowSeconds: 60 * 60 },
+  // Each refresh is a live call to TMDB, RAWG or Open Library on the app's
+  // shared API keys and quotas.
+  refresh: { limit: 30, windowSeconds: 60 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 export interface RateLimitResult {

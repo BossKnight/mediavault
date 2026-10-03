@@ -1,7 +1,16 @@
 import type { UnifiedSearchResult } from "@/types/media";
-import { normalizeOpenLibraryBookData, normalizeOpenLibrarySearchDoc } from "./normalize";
+import {
+  normalizeOpenLibraryBookData,
+  normalizeOpenLibrarySearchDoc,
+  normalizeOpenLibraryWork,
+} from "./normalize";
 import { lookupGoogleBooksByIsbn } from "./googlebooks";
-import type { OpenLibraryIsbnResponse, OpenLibrarySearchResponse } from "./types";
+import type {
+  OpenLibraryAuthor,
+  OpenLibraryIsbnResponse,
+  OpenLibrarySearchResponse,
+  OpenLibraryWork,
+} from "./types";
 
 const OPEN_LIBRARY_BASE_URL = "https://openlibrary.org";
 
@@ -88,4 +97,43 @@ export async function lookupIsbn(isbn: string): Promise<UnifiedSearchResult | nu
   }
 
   return result;
+}
+
+/**
+ * Fetches one work (what a title search returns) by its id, e.g. "OL45804W".
+ * The first author's name takes a second request; if that one fails the
+ * work is still returned, just without an author. Returns null when Open
+ * Library has no such work; throws when it can't be reached.
+ */
+export async function getOpenLibraryWork(workId: string): Promise<UnifiedSearchResult | null> {
+  const response = await fetch(`${OPEN_LIBRARY_BASE_URL}/works/${encodeURIComponent(workId)}.json`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new OpenLibraryApiError(
+      `Open Library work lookup failed with status ${response.status}`,
+      response.status,
+    );
+  }
+
+  const work = (await response.json()) as OpenLibraryWork;
+  const authorKey = work.authors?.[0]?.author?.key;
+  // The key goes into a URL, so only an author key of the expected shape is followed.
+  const authorName =
+    authorKey && /^\/authors\/OL\d+A$/.test(authorKey)
+      ? await getOpenLibraryAuthorName(authorKey).catch(() => null)
+      : null;
+  return normalizeOpenLibraryWork(workId, work, authorName);
+}
+
+async function getOpenLibraryAuthorName(authorKey: string): Promise<string | null> {
+  const response = await fetch(`${OPEN_LIBRARY_BASE_URL}${authorKey}.json`, {
+    headers: { Accept: "application/json" },
+    // An author's name is about as stable as data gets.
+    next: { revalidate: 24 * 60 * 60 },
+  });
+  if (!response.ok) return null;
+  return ((await response.json()) as OpenLibraryAuthor).name?.trim() || null;
 }

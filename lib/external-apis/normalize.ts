@@ -7,7 +7,10 @@ import type {
   GoogleBooksVolumeInfo,
   OpenLibraryBookData,
   OpenLibrarySearchDoc,
+  OpenLibraryWork,
   RawgGame,
+  RawgGameDetails,
+  TmdbDetails,
   TmdbMovieResult,
 } from "./types";
 
@@ -72,6 +75,17 @@ export function normalizeTmdbResult(
   };
 }
 
+/** A TMDB details response, normalized like a search result. */
+export function normalizeTmdbDetails(
+  details: TmdbDetails,
+  mediaType: "MOVIE" | "TV",
+): UnifiedSearchResult {
+  return {
+    ...normalizeTmdbResult({ ...details, genre_ids: [] }, mediaType),
+    genres: (details.genres ?? []).map((genre) => genre.name),
+  };
+}
+
 export function normalizeRawgResult(game: RawgGame): UnifiedSearchResult {
   return {
     source: "RAWG",
@@ -85,6 +99,15 @@ export function normalizeRawgResult(game: RawgGame): UnifiedSearchResult {
     // RAWG's search results don't include the developer, only its separate
     // per-game details endpoint does, so this is always null.
     creator: null,
+  };
+}
+
+/** A RAWG details response: a search result plus description and developer. */
+export function normalizeRawgDetails(game: RawgGameDetails): UnifiedSearchResult {
+  return {
+    ...normalizeRawgResult(game),
+    overview: game.description_raw?.trim() || null,
+    creator: game.developers?.[0]?.name ?? null,
   };
 }
 
@@ -111,6 +134,28 @@ export function normalizeOpenLibrarySearchDoc(doc: OpenLibrarySearchDoc): Unifie
     overview: null,
     genres: (doc.subject ?? []).slice(0, 6),
     creator: doc.author_name?.[0] ?? null,
+    isbn: null,
+  };
+}
+
+/** An Open Library work, normalized like the search result that points at it. */
+export function normalizeOpenLibraryWork(
+  workId: string,
+  work: OpenLibraryWork,
+  authorName: string | null,
+): UnifiedSearchResult {
+  const description = typeof work.description === "string" ? work.description : work.description?.value;
+  const coverId = work.covers?.find((id) => id > 0);
+  return {
+    source: "OPENLIBRARY",
+    externalId: workId,
+    mediaType: "BOOK",
+    title: work.title?.trim() || "Untitled",
+    releaseDate: extractYear(work.first_publish_date),
+    coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
+    overview: description?.trim() || null,
+    genres: (work.subjects ?? []).slice(0, 6),
+    creator: authorName,
     isbn: null,
   };
 }
