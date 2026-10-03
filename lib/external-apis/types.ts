@@ -32,6 +32,8 @@ export interface RawgGame {
   released?: string | null;
   background_image?: string | null;
   genres?: { name: string }[];
+  // Every platform the game was released on.
+  platforms?: { platform: { name: string } }[] | null;
 }
 
 export interface RawgSearchResponse {

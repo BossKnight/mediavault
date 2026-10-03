@@ -489,6 +489,7 @@ export function AddItemModal({
             <PlatformField
               key={`${selected.source}:${selected.mediaType}:${selected.externalId}`}
               mediaType={selected.mediaType}
+              availablePlatforms={selected.availablePlatforms}
               value={platforms}
               onChange={setPlatforms}
             />

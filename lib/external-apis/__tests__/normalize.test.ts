@@ -154,7 +154,24 @@ describe("normalizeRawgResult", () => {
       overview: null,
       genres: ["Action", "Adventure"],
       creator: null,
+      availablePlatforms: [],
     });
+  });
+
+  it("lists the game's platforms under the app's short names", () => {
+    const result = normalizeRawgResult({
+      id: 58175,
+      name: "God of War",
+      platforms: [
+        { platform: { name: "PlayStation 2" } },
+        { platform: { name: "Xbox Series S/X" } },
+        { platform: { name: "Nintendo Switch" } },
+        { platform: { name: "PC" } },
+        { platform: { name: "Atari Lynx" } },
+      ],
+    });
+
+    expect(result.availablePlatforms).toEqual(["PS2", "Xbox Series X|S", "Switch", "PC", "Atari Lynx"]);
   });
 
   it("handles a game with no genres listed", () => {
@@ -350,6 +367,7 @@ describe("normalizeRawgDetails", () => {
       overview: "Play as Crypto, an alien invader.",
       creator: "Pandemic Studios",
       genres: ["Action"],
+      availablePlatforms: [],
     });
   });
 

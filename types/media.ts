@@ -98,6 +98,9 @@ export interface UnifiedSearchResult {
   // Book only — carried through so a barcode-scanned title round-trips
   // straight to the catalog with its ISBN attached.
   isbn?: string | null;
+  // Game only: the platforms it was released on, offered as choices when
+  // adding it. Not stored (the catalog API ignores it).
+  availablePlatforms?: string[];
 }
 
 /**

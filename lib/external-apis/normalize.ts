@@ -2,6 +2,7 @@
 // payload into a UnifiedSearchResult. Kept dependency-free (no fetch, no env
 // access) so they are trivial to unit test.
 
+import { normalizePlatforms } from "@/lib/platforms";
 import type { UnifiedSearchResult } from "@/types/media";
 import type {
   GoogleBooksVolumeInfo,
@@ -99,6 +100,9 @@ export function normalizeRawgResult(game: RawgGame): UnifiedSearchResult {
     // RAWG's search results don't include the developer, only its separate
     // per-game details endpoint does, so this is always null.
     creator: null,
+    availablePlatforms: normalizePlatforms(
+      (game.platforms ?? []).map(({ platform }) => platform.name),
+    ),
   };
 }
 
