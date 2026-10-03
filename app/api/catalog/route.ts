@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { MAX_PLATFORMS, MAX_PLATFORM_LENGTH, normalizePlatforms } from "@/lib/platforms";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
@@ -22,7 +23,17 @@ const createCatalogSchema = z.object({
     .enum(["PLAN_TO_WATCH", "IN_PROGRESS", "COMPLETED", "ON_HOLD", "DROPPED"])
     .optional(),
   ownership: z.enum(["OWNED", "WISHLIST"]).optional(),
-  platform: z.string().max(60).nullable().optional(),
+  platforms: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(MAX_PLATFORM_LENGTH, `Keep each platform or format under ${MAX_PLATFORM_LENGTH} characters`),
+    )
+    .max(MAX_PLATFORMS, `List at most ${MAX_PLATFORMS} platforms or formats`)
+    .transform(normalizePlatforms)
+    .optional(),
 });
 
 const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
@@ -109,7 +120,7 @@ export async function POST(request: Request) {
         mediaItemId: mediaItem.id,
         status: data.status ?? "PLAN_TO_WATCH",
         ownership: data.ownership ?? "OWNED",
-        platform: data.platform ?? null,
+        platforms: data.platforms ?? [],
       },
       include: catalogEntryInclude,
     });
@@ -122,7 +133,8 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(
         {
-          error: "This title is already in your vault",
+          error:
+            "This title is already in your vault. Open it there to add another platform or format.",
           entry: existing ? toCatalogEntry(existing) : null,
         },
         { status: 409 },

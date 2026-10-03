@@ -91,6 +91,14 @@ of; this app is the multi-user, cloud-backed rebuild described below.
 - `types/` — shared TypeScript types
 - `prisma/` — database schema and seed script
 
+## Formats and platforms
+
+A title owned in several formats or on several platforms (a movie on DVD and 4K UHD, a game on
+PS2 and Xbox) is one vault entry that lists all of them, in `UserMediaProgress.platforms`.
+After pulling this change, run `npm run prisma:migrate`: it only adds the `platforms` column.
+Existing single values in the old `platform` column keep showing (as a one-item list) and move
+to `platforms` the next time each entry is saved, so no data is lost.
+
 ## Rate limiting
 
 Sign-up, sign-in, and barcode lookups are rate limited (see `lib/rate-limit.ts`). Counts live

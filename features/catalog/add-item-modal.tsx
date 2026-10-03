@@ -6,20 +6,12 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PlatformField } from "@/features/catalog/platform-field";
 import { Camera, Loader, Search } from "@/components/ui/icons";
 import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
-  BOOK_FORMATS,
   MEDIA_TYPE_LABELS,
-  PHYSICAL_FORMATS,
   type CatalogEntry,
   type MediaType,
   type OwnershipStatus,
@@ -31,9 +23,6 @@ const SAVE_LABELS: Record<OwnershipStatus, string> = {
   OWNED: "Add to vault",
   WISHLIST: "Add to wishlist",
 };
-// Sentinel for "no format/platform set" — Radix Select items can't use "".
-const PLATFORM_NONE = "NONE";
-
 type Step = "search" | "scan" | "confirm";
 
 interface AddItemModalProps {
@@ -61,7 +50,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
   const [searchError, setSearchError] = useState<string | null>(null);
   const [settledSearchKey, setSettledSearchKey] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
-  const [platform, setPlatform] = useState("");
+  const [platforms, setPlatforms] = useState<string[]>([]);
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
@@ -123,7 +112,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
     setRetryToken((token) => token + 1);
     setSelected(null);
     setSaveError(null);
-    setPlatform("");
+    setPlatforms([]);
   }
 
   function handleRetry() {
@@ -169,7 +158,7 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
           ownership,
           // A wishlist item has no physical copy yet, so there's no format
           // or platform to record — whatever's in the field is ignored.
-          platform: ownership === "OWNED" ? platform.trim() || null : null,
+          platforms: ownership === "OWNED" ? platforms : [],
         }),
       });
       const data = await response.json();
@@ -360,60 +349,12 @@ export function AddItemModal({ onAdded, primaryOwnership = "OWNED" }: AddItemMod
               </div>
             </div>
 
-            {(selected.mediaType === "MOVIE" || selected.mediaType === "TV") && (
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-surface-foreground">Platform</span>
-                <Select
-                  value={platform || PLATFORM_NONE}
-                  onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
-                    {PHYSICAL_FORMATS.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {format}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            )}
-
-            {selected.mediaType === "BOOK" && (
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-surface-foreground">Format</span>
-                <Select
-                  value={platform || PLATFORM_NONE}
-                  onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
-                    {BOOK_FORMATS.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {format}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            )}
-
-            {selected.mediaType === "GAME" && (
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="font-medium text-surface-foreground">Platform</span>
-                <Input
-                  value={platform}
-                  onChange={(event) => setPlatform(event.target.value)}
-                  placeholder="PS5, PC, Switch..."
-                />
-              </label>
-            )}
+            <PlatformField
+              key={`${selected.source}:${selected.externalId}`}
+              mediaType={selected.mediaType}
+              value={platforms}
+              onChange={setPlatforms}
+            />
 
             {saveError && (
               <p role="alert" className="text-sm text-danger">

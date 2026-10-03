@@ -11,7 +11,7 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     reviewNotes: null,
     ownedSeasons: [],
     completeSeries: false,
-    platform: null,
+    platforms: [],
     hoursPlayed: null,
     startedAt: null,
     completedAt: null,

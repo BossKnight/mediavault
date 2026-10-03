@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { storedPlatforms } from "@/lib/platforms";
 import type {
   CatalogEntry,
   CatalogStats,
@@ -26,7 +27,7 @@ export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
     reviewNotes: row.reviewNotes,
     ownedSeasons: row.ownedSeasons,
     completeSeries: row.completeSeries,
-    platform: row.platform,
+    platforms: storedPlatforms(row),
     hoursPlayed: row.hoursPlayed,
     startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
