@@ -154,3 +154,70 @@ describe("AddItemModal drafts", () => {
     expect(readAddDraft()).toBeNull();
   });
 });
+
+// jsdom has no AnimationEvent, so React listens for the prefixed name.
+function shakeEnds(element: HTMLElement) {
+  act(() => {
+    element.dispatchEvent(new Event("webkitAnimationEnd", { bubbles: true }));
+    element.dispatchEvent(new Event("animationend", { bubbles: true }));
+  });
+}
+
+describe("AddItemModal save button", () => {
+  const celeste = result("Celeste", "GAME");
+  const entry = { id: "e1", status: "PLAN_TO_WATCH", ownership: "OWNED", platforms: [], mediaItem: celeste };
+
+  function renderConfirm(respond: () => Response | Promise<Response>) {
+    vi.stubGlobal("fetch", vi.fn(async () => respond()));
+    render(
+      <AddItemModal
+        open
+        onOpenChange={() => {}}
+        returnFocusTo={{ current: null }}
+        onAdded={() => {}}
+        draft={{ result: celeste, platforms: [] }}
+      />,
+    );
+    return screen.getByRole("button", { name: "Add to vault" });
+  }
+
+  beforeEach(() => sessionStorage.clear());
+
+  it("shows loading, then a check, then moves on to the confirmation", async () => {
+    let finish!: (response: Response) => void;
+    const save = renderConfirm(() => new Promise((resolve) => (finish = resolve)));
+    save.focus();
+
+    fireEvent.click(save);
+    expect(save).toHaveAttribute("data-state", "loading");
+    expect(save).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent("Saving “Celeste”...");
+    // A second click while saving doesn't post again.
+    fireEvent.click(save);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    await act(async () => finish(new Response(JSON.stringify({ entry }), { status: 201 })));
+    expect(save).toHaveAttribute("data-state", "success");
+    expect(screen.getByRole("status")).toHaveTextContent("Added “Celeste” to your vault.");
+    expect(screen.queryByRole("button", { name: "Add another" })).not.toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(320));
+    expect(screen.getByRole("button", { name: "Add another" })).toBeInTheDocument();
+  });
+
+  it("shakes for rejected input, but not for a duplicate", async () => {
+    let status = 400;
+    const save = renderConfirm(() => new Response(JSON.stringify({ error: "Too many platforms" }), { status }));
+
+    fireEvent.click(save);
+    await screen.findByRole("alert");
+    expect(save).toHaveAttribute("data-state", "error");
+    shakeEnds(save);
+    expect(save).toHaveAttribute("data-state", "idle");
+
+    status = 409;
+    fireEvent.click(save);
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(save).toHaveAttribute("data-state", "idle");
+  });
+});

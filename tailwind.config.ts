@@ -6,6 +6,11 @@ function themeColor(variable: string) {
 }
 
 const config: Config = {
+  // `hover:` only applies on devices that can hover, so a tap on a phone
+  // doesn't leave a button stuck in its hover color.
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   // Colors switch themes through the CSS custom properties in
   // app/globals.css, so components never need `dark:` variants.
   content: [
@@ -62,6 +67,10 @@ const config: Config = {
           "-apple-system",
           "sans-serif",
         ],
+      },
+      animation: {
+        // An error message settling into place (keyframes in globals.css).
+        rise: "rise 160ms cubic-bezier(0.2, 0, 0, 1)",
       },
       borderRadius: {
         card: "var(--radius-card)",

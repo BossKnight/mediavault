@@ -184,6 +184,146 @@
   }
 }
 
+/*
+  Button motion (components/ui/button.tsx). "Snappy": a press responds in
+  60 ms, colors settle in 100 ms, nothing idles, and only the release
+  overshoots (about 6%). Only color, opacity and transform animate, which
+  never trigger layout.
+*/
+@layer components {
+  .btn {
+    --ease-out: cubic-bezier(0.2, 0, 0, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition:
+      background-color 100ms var(--ease-out),
+      border-color 100ms var(--ease-out),
+      color 100ms var(--ease-out),
+      opacity 100ms var(--ease-out),
+      transform 160ms var(--ease-spring);
+  }
+  .btn > .btn-label,
+  .btn > .btn-spinner,
+  .btn > .btn-check {
+    grid-area: 1 / 1;
+  }
+
+  /* Pressed: in over 60 ms; releasing springs back with the 160 ms above. */
+  .btn:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.96);
+    transition:
+      background-color 60ms var(--ease-out),
+      transform 60ms var(--ease-out);
+  }
+
+  .btn-spinner,
+  .btn-check {
+    opacity: 0;
+  }
+  .btn-spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+  }
+  .btn-check path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+
+  /* Loading: the spinner fades in only after 150 ms, so a quick save never
+     flashes one. The delay is on entry only; the label returns at once. */
+  .btn[data-state="loading"] {
+    cursor: progress;
+  }
+  .btn[data-state="loading"] > .btn-label,
+  .btn[data-state="loading"] > .btn-spinner {
+    transition: opacity 100ms var(--ease-out) 150ms;
+  }
+  .btn[data-state="loading"] > .btn-label {
+    opacity: 0;
+  }
+  .btn[data-state="loading"] > .btn-spinner {
+    opacity: 1;
+    animation: btn-spin 600ms linear infinite;
+  }
+
+  /* Success: green, and the check draws itself. `button.btn` outranks the
+     variant's hover color, so hovering can't undo it. */
+  button.btn[data-state="success"] {
+    background-color: hsl(var(--success));
+    border-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+    cursor: default;
+  }
+  /* Its own fade, with no delay: after a quick save the loading state's
+     delayed fade would otherwise still be pending, leaving the label on
+     top of the check. */
+  .btn[data-state="success"] > .btn-label {
+    opacity: 0;
+    transition: opacity 80ms var(--ease-out);
+  }
+  .btn[data-state="success"] > .btn-check {
+    opacity: 1;
+  }
+  .btn[data-state="success"] > .btn-check path {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 220ms var(--ease-out) 40ms;
+  }
+
+  /* Error: one short shake. Only for mistakes the user can fix in the
+     form; the caller decides. */
+  .btn[data-state="error"] {
+    animation: btn-nudge 260ms var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn,
+    .btn:active:not(:disabled):not([aria-disabled="true"]) {
+      transform: none;
+      transition-property: background-color, border-color, color, opacity;
+    }
+    .btn[data-state="error"] {
+      animation: none;
+    }
+    /* A small spinner isn't the large motion this setting is about, but
+       slow it down; the check appears without drawing. */
+    .btn[data-state="loading"] > .btn-spinner {
+      animation-duration: 1200ms;
+    }
+    .btn[data-state="success"] > .btn-check path {
+      transition: none;
+    }
+  }
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes btn-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  45% {
+    transform: translateX(4px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 @layer utilities {
   .focus-ring {
     @apply outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
