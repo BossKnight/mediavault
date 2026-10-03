@@ -6,7 +6,7 @@
 //     users have catalogued it.
 //   - UserMediaProgress is the per-user join row: status, rating, notes, and
 //     type-specific fields (owned seasons for TV, hours played for games,
-//     and a shared physical format / platform column).
+//     and a shared list of physical formats / platforms).
 //
 // This keeps external metadata de-duplicated and lets user-specific data (a
 // rating, a review) live independently of the shared title record.
@@ -101,10 +101,14 @@ model UserMediaProgress {
   ownedSeasons   Int[]
   completeSeries Boolean @default(false)
 
-  // Movie/TV physical format (VHS, DVD, Blu-Ray, 4K UHD), book format
-  // (Hardcover, Paperback...), and game platform (PS5, PC, Switch...) share
-  // this column; only one applies per media type.
-  platform String?
+  // Movie/TV physical formats (VHS, DVD, Blu-Ray, 4K UHD), book formats
+  // (Hardcover, Paperback...), and game platforms (PS5, PC, Switch...) share
+  // this column; a title owned in several is one entry listing all of them.
+  platforms String[] @default([])
+  // Legacy single value from before `platforms`. Kept so adding the list is
+  // a purely additive migration; it's read as a fallback (see
+  // lib/platforms.ts) and cleared the next time the entry is saved.
+  platform  String?
 
   // Game-specific progress.
   hoursPlayed Float?

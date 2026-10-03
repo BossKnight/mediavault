@@ -61,13 +61,13 @@ export function getStatusLabel(status: WatchStatus, mediaType: MediaType): strin
 }
 
 /**
- * Physical media format for movies and TV shows, stored in the same
- * `platform` column games use for their platform (PS5, PC, Switch, ...).
+ * Physical media formats for movies and TV shows, stored in the same
+ * `platforms` list games use for their platforms (PS5, PC, Switch, ...).
  */
 export const PHYSICAL_FORMATS = ["VHS", "DVD", "Blu-Ray", "4K UHD"] as const;
 export type PhysicalFormat = (typeof PHYSICAL_FORMATS)[number];
 
-/** Physical book format, stored in the same `platform` column as above. */
+/** Physical book formats, stored in the same `platforms` list as above. */
 export const BOOK_FORMATS = ["Hardcover", "Paperback", "Mass Market Paperback", "Audiobook"] as const;
 export type BookFormat = (typeof BOOK_FORMATS)[number];
 
@@ -103,7 +103,8 @@ export interface CatalogEntry {
   reviewNotes: string | null;
   ownedSeasons: number[];
   completeSeries: boolean;
-  platform: string | null;
+  // Every format or platform owned, e.g. ["DVD", "4K UHD"] or ["PS2", "Xbox"].
+  platforms: string[];
   hoursPlayed: number | null;
   startedAt: string | null;
   completedAt: string | null;

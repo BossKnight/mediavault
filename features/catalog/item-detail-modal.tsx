@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { PlatformField } from "@/features/catalog/platform-field";
 import { StarRating } from "@/components/ui/star-rating";
 import { formatSeasonList, parseSeasonInput } from "@/lib/seasons";
 import {
@@ -18,9 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BOOK_FORMATS,
   OWNERSHIP_STATUS_LABELS,
-  PHYSICAL_FORMATS,
   getStatusLabel,
   getStatusOptions,
   type CatalogEntry,
@@ -29,9 +28,6 @@ import {
 } from "@/types/media";
 
 const OWNERSHIP_OPTIONS: OwnershipStatus[] = ["OWNED", "WISHLIST"];
-
-// Sentinel for "no format/platform set" — Radix Select items can't use "".
-const PLATFORM_NONE = "NONE";
 
 interface ItemDetailModalProps {
   entry: CatalogEntry | null;
@@ -76,7 +72,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
   const [reviewNotes, setReviewNotes] = useState(entry.reviewNotes ?? "");
   const [completeSeries, setCompleteSeries] = useState(entry.completeSeries);
   const [ownedSeasonsText, setOwnedSeasonsText] = useState(formatSeasonList(entry.ownedSeasons));
-  const [platform, setPlatform] = useState(entry.platform ?? "");
+  const [platforms, setPlatforms] = useState(entry.platforms);
   const [ownership, setOwnership] = useState<OwnershipStatus>(entry.ownership);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -111,10 +107,10 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
       body.completeSeries = completeSeries;
       body.ownedSeasons = completeSeries ? [] : parsedSeasons.seasons;
     }
-    // Movies and TV store their physical format (VHS/DVD/Blu-Ray/4K UHD),
-    // books their format (Hardcover, Paperback...), and games their platform
-    // (PS5, PC, Switch...) in the same `platform` field.
-    body.platform = platform.trim() || null;
+    // Movies and TV store their physical formats (VHS/DVD/Blu-Ray/4K UHD),
+    // books their formats (Hardcover, Paperback...), and games their
+    // platforms (PS5, PC, Switch...) in the same `platforms` list.
+    body.platforms = platforms;
 
     try {
       const response = await fetch(`/api/catalog/${entryId}`, {
@@ -290,60 +286,11 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                 </div>
               )}
 
-              {(mediaItem.mediaType === "MOVIE" || mediaItem.mediaType === "TV") && (
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-surface-foreground">Platform</span>
-                  <Select
-                    value={platform || PLATFORM_NONE}
-                    onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
-                      {PHYSICAL_FORMATS.map((format) => (
-                        <SelectItem key={format} value={format}>
-                          {format}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-              )}
-
-              {mediaItem.mediaType === "BOOK" && (
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-surface-foreground">Format</span>
-                  <Select
-                    value={platform || PLATFORM_NONE}
-                    onValueChange={(value) => setPlatform(value === PLATFORM_NONE ? "" : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={PLATFORM_NONE}>Not set</SelectItem>
-                      {BOOK_FORMATS.map((format) => (
-                        <SelectItem key={format} value={format}>
-                          {format}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-              )}
-
-              {mediaItem.mediaType === "GAME" && (
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-surface-foreground">Platform</span>
-                  <Input
-                    value={platform}
-                    onChange={(event) => setPlatform(event.target.value)}
-                    placeholder="PS5, PC, Switch..."
-                  />
-                </label>
-              )}
+              <PlatformField
+                mediaType={mediaItem.mediaType}
+                value={platforms}
+                onChange={setPlatforms}
+              />
 
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-surface-foreground">Notes</span>

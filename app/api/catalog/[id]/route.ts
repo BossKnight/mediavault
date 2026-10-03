@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { MAX_PLATFORMS, MAX_PLATFORM_LENGTH, normalizePlatforms } from "@/lib/platforms";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
@@ -13,7 +14,17 @@ const updateCatalogSchema = z.object({
   reviewNotes: z.string().max(4000).nullable().optional(),
   ownedSeasons: z.array(z.number().int().min(1)).optional(),
   completeSeries: z.boolean().optional(),
-  platform: z.string().max(60).nullable().optional(),
+  platforms: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(MAX_PLATFORM_LENGTH, `Keep each platform or format under ${MAX_PLATFORM_LENGTH} characters`),
+    )
+    .max(MAX_PLATFORMS, `List at most ${MAX_PLATFORMS} platforms or formats`)
+    .transform(normalizePlatforms)
+    .optional(),
   hoursPlayed: z.number().min(0).nullable().optional(),
 });
 
@@ -59,9 +70,12 @@ export async function PUT(
     timestamps.completedAt = new Date();
   }
 
+  // Saving the list retires any legacy single value, so the two can't disagree.
+  const legacy = data.platforms ? { platform: null } : {};
+
   const updated = await prisma.userMediaProgress.update({
     where: { id },
-    data: { ...data, ...timestamps },
+    data: { ...data, ...legacy, ...timestamps },
     include: catalogEntryInclude,
   });
 
