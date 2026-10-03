@@ -1,11 +1,11 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { loadAuthClient, preloadAuthClient } from "@/lib/auth-client";
 
 interface FieldErrors {
   email?: string;
@@ -72,7 +72,9 @@ export function RegisterForm() {
 
     // The account exists at this point, so any sign-in failure (including a
     // network error) means "sign in manually", not "try registering again".
-    const result = await signIn("credentials", { email, password, redirect: false }).catch(() => null);
+    const result = await loadAuthClient()
+      .then(({ signIn }) => signIn("credentials", { email, password, redirect: false }))
+      .catch(() => null);
     if (!result || result.error) {
       setAccountCreated(true);
       setSubmitting(false);
@@ -84,7 +86,12 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      onFocus={preloadAuthClient}
+      noValidate
+      className="flex flex-col gap-4"
+    >
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium text-surface-foreground">Name (optional)</span>
         <Input

@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
 import { CatalogList } from "@/features/catalog/catalog-list";
 import { ViewToggle } from "@/features/catalog/view-toggle";
+import {
+  AddItemButton,
+  ItemDetailModal,
+  preloadItemDetailModal,
+} from "@/features/catalog/lazy-modals";
 import { StatsPanel } from "@/features/catalog/stats-panel";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
@@ -27,20 +31,6 @@ import type {
   MediaType,
   WatchStatus,
 } from "@/types/media";
-
-// Code-split the two modals out of the catalog page's main bundle: neither
-// is needed for the initial render (Add Item's dialog content and Item
-// Detail's entire tree are both closed by default), but each pulls in
-// Radix Dialog/Select. Add Item keeps SSR on since its trigger button is
-// visible immediately; Item Detail always renders null until a card is
-// clicked, so it never needs to be part of the server-rendered HTML at all.
-const AddItemModal = dynamic(() =>
-  import("@/features/catalog/add-item-modal").then((mod) => mod.AddItemModal),
-);
-const ItemDetailModal = dynamic(
-  () => import("@/features/catalog/item-detail-modal").then((mod) => mod.ItemDetailModal),
-  { ssr: false },
-);
 
 // One row at the widest grid breakpoint (6 columns); see CatalogItemCard's
 // `priority` prop.
@@ -223,7 +213,11 @@ export function CatalogView({
   const hasAnyItems = stats.total > 0;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div
+      className="flex flex-col gap-8"
+      onPointerEnter={preloadItemDetailModal}
+      onFocus={preloadItemDetailModal}
+    >
       {hasAnyItems ? (
         <>
           <StatsPanel
@@ -247,7 +241,7 @@ export function CatalogView({
             />
             <div className="flex items-center gap-2">
               <ViewToggle value={layout} onChange={setLayout} />
-              <AddItemModal onAdded={handleAdded} />
+              <AddItemButton onAdded={handleAdded} />
             </div>
           </div>
 
@@ -376,7 +370,7 @@ function EmptyState({ hasAnyEntries, onClearFilters, onAdded }: EmptyStateProps)
           Clear filters
         </Button>
       ) : (
-        <AddItemModal onAdded={onAdded} />
+        <AddItemButton onAdded={onAdded} />
       )}
     </div>
   );

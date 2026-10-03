@@ -1,7 +1,7 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { loadAuthClient, preloadAuthClient } from "@/lib/auth-client";
 
 export function SignOutButton() {
   return (
@@ -9,7 +9,12 @@ export function SignOutButton() {
       variant="secondary"
       size="sm"
       className="shrink-0 whitespace-nowrap"
-      onClick={() => signOut({ callbackUrl: "/login" })}
+      onPointerEnter={preloadAuthClient}
+      onFocus={preloadAuthClient}
+      onClick={async () => {
+        const { signOut } = await loadAuthClient();
+        await signOut({ callbackUrl: "/login" });
+      }}
     >
       Sign out
     </Button>
