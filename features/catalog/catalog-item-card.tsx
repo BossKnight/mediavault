@@ -7,6 +7,10 @@ import { CoverArt } from "@/features/catalog/cover-art";
 import { Badge } from "@/components/ui/badge";
 import type { CatalogEntry } from "@/types/media";
 
+// Cards are narrow, so a long platform list is cut to this many chips plus a
+// "+N" chip carrying the rest.
+const MAX_VISIBLE_PLATFORMS = 3;
+
 interface CatalogItemCardProps {
   entry: CatalogEntry;
   onSelect: (entry: CatalogEntry) => void;
@@ -18,6 +22,11 @@ interface CatalogItemCardProps {
 
 export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardProps) {
   const { mediaItem } = entry;
+  // Wishlist entries can keep platforms from when they were owned, but they
+  // aren't copies on the shelf, so only owned entries show them.
+  const platforms = entry.ownership === "OWNED" ? entry.platforms : [];
+  const visiblePlatforms = platforms.slice(0, MAX_VISIBLE_PLATFORMS);
+  const hiddenPlatforms = platforms.slice(MAX_VISIBLE_PLATFORMS);
 
   return (
     <button
@@ -56,6 +65,21 @@ export function CatalogItemCard({ entry, onSelect, priority }: CatalogItemCardPr
         <p className="text-xs text-muted-foreground">
           {mediaItem.releaseDate?.slice(0, 4) ?? "Unknown year"}
         </p>
+        {platforms.length > 0 && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {visiblePlatforms.map((platform) => (
+              <Badge key={platform} className="px-2 py-0 text-[11px]">
+                {platform}
+              </Badge>
+            ))}
+            {hiddenPlatforms.length > 0 && (
+              <Badge className="px-2 py-0 text-[11px]" title={hiddenPlatforms.join(", ")}>
+                +{hiddenPlatforms.length}
+                <span className="sr-only"> more: {hiddenPlatforms.join(", ")}</span>
+              </Badge>
+            )}
+          </span>
+        )}
         {entry.ownership === "OWNED" && <StarRating value={entry.rating} readOnly className="mt-1" />}
       </div>
     </button>
