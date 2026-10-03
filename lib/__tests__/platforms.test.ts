@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { normalizePlatforms, parsePlatformList, storedPlatforms } from "@/lib/platforms";
+import {
+  canonicalPlatform,
+  normalizePlatforms,
+  parsePlatformList,
+  storedPlatforms,
+} from "@/lib/platforms";
+import { BOOK_FORMATS, PHYSICAL_FORMATS } from "@/types/media";
 
 describe("normalizePlatforms", () => {
   it("trims, drops blanks and drops repeats regardless of case", () => {
@@ -33,5 +39,31 @@ describe("storedPlatforms", () => {
 
   it("is empty when nothing is set", () => {
     expect(storedPlatforms({ platforms: [], platform: null })).toEqual([]);
+  });
+});
+
+describe("canonicalPlatform", () => {
+  it("maps RAWG's and common spellings of game platforms to short names", () => {
+    expect(canonicalPlatform("PlayStation 2")).toBe("PS2");
+    expect(canonicalPlatform(" nintendo switch ")).toBe("Switch");
+    expect(canonicalPlatform("Xbox Series S/X")).toBe("Xbox Series X|S");
+    expect(canonicalPlatform("macOS")).toBe("Mac");
+  });
+
+  it("passes other names and formats through, trimmed", () => {
+    expect(canonicalPlatform(" Atari 2600 ")).toBe("Atari 2600");
+    for (const format of [...PHYSICAL_FORMATS, ...BOOK_FORMATS]) {
+      expect(canonicalPlatform(format)).toBe(format);
+    }
+  });
+});
+
+describe("normalizePlatforms with game platform names", () => {
+  it("merges spellings of one platform, keeping the first position", () => {
+    expect(normalizePlatforms(["PlayStation 2", "PC", "ps2", "Nintendo Switch"])).toEqual([
+      "PS2",
+      "PC",
+      "Switch",
+    ]);
   });
 });

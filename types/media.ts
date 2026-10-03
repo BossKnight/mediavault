@@ -36,6 +36,15 @@ export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
   BOOK: "Book",
 };
 
+// For use mid-sentence ("Search for a TV show", "No TV shows match"), where
+// lowercasing MEDIA_TYPE_LABELS would give "tv show".
+export const MEDIA_TYPE_NOUNS: Record<MediaType, { one: string; many: string }> = {
+  MOVIE: { one: "movie", many: "movies" },
+  TV: { one: "TV show", many: "TV shows" },
+  GAME: { one: "game", many: "games" },
+  BOOK: { one: "book", many: "books" },
+};
+
 /**
  * Games don't offer "On hold" at all. The underlying WatchStatus values
  * are shared across media types (no schema difference) — only the label
@@ -89,6 +98,9 @@ export interface UnifiedSearchResult {
   // Book only — carried through so a barcode-scanned title round-trips
   // straight to the catalog with its ISBN attached.
   isbn?: string | null;
+  // Game only: the platforms it was released on, offered as choices when
+  // adding it. Not stored (the catalog API ignores it).
+  availablePlatforms?: string[];
 }
 
 /**

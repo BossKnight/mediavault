@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from "react";
 import Image from "next/image";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorMessage, SignInAgainLink } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +13,7 @@ import { PlatformField } from "@/features/catalog/platform-field";
 import { StarRating } from "@/components/ui/star-rating";
 import { Loader, Refresh } from "@/components/ui/icons";
 import { formatSeasonList, parseSeasonInput } from "@/lib/seasons";
+import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
 import {
   Select,
   SelectContent,
@@ -102,7 +104,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
       const response = await fetch(`/api/catalog/${entryId}/refresh`, { method: "POST" });
       const data = await response.json();
       if (!response.ok) {
-        setRefreshMessage(data.error ?? "Couldn't refresh the details.");
+        setRefreshMessage(apiErrorMessage(response, data, "Couldn't refresh the details."));
         return;
       }
       onUpdated(data.entry as CatalogEntry);
@@ -145,7 +147,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "Couldn't save your changes.");
+        setError(apiErrorMessage(response, data, "Couldn't save your changes."));
         return;
       }
 
@@ -165,8 +167,8 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
     try {
       const response = await fetch(`/api/catalog/${entryId}`, { method: "DELETE" });
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        setError(data.error ?? "Couldn't remove this item.");
+        const data = await response.json().catch(() => null);
+        setError(apiErrorMessage(response, data, "Couldn't remove this item."));
         return;
       }
       onDeleted(entryId);
@@ -218,6 +220,12 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
                 {/* Always mounted so the result is announced when it appears. */}
                 <p role="status" className="text-xs text-muted-foreground">
                   {refreshMessage}
+                  {refreshMessage === SESSION_EXPIRED_MESSAGE && (
+                    <>
+                      {" "}
+                      <SignInAgainLink />
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -344,11 +352,7 @@ function ItemDetailForm({ entry, onClose, onUpdated, onDeleted }: ItemDetailForm
             </>
           )}
 
-          {error && (
-            <p role="alert" className="text-sm text-danger">
-              {error}
-            </p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             {confirmingDelete ? (

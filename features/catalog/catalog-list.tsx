@@ -1,6 +1,7 @@
 "use client";
 
 import { StatusBadge } from "@/features/catalog/status-badge";
+import { cn } from "@/lib/utils";
 import { MEDIA_TYPE_LABELS, type CatalogEntry } from "@/types/media";
 
 interface CatalogListProps {
@@ -9,6 +10,8 @@ interface CatalogListProps {
   // The wishlist shows each title's type instead of platform and status:
   // nothing there has been started, and wishlist cards hide platforms too.
   variant?: "vault" | "wishlist";
+  // Just-added entries, tinted while the page's "Added ..." notice shows.
+  highlightedIds?: ReadonlySet<string>;
 }
 
 function releaseYear(entry: CatalogEntry): string | null {
@@ -20,7 +23,12 @@ function releaseYear(entry: CatalogEntry): string | null {
  * an item, so the table stays a real table for screen readers while the
  * whole row is clickable.
  */
-export function CatalogList({ entries, onSelect, variant = "vault" }: CatalogListProps) {
+export function CatalogList({
+  entries,
+  onSelect,
+  variant = "vault",
+  highlightedIds,
+}: CatalogListProps) {
   const isVault = variant === "vault";
 
   return (
@@ -55,7 +63,10 @@ export function CatalogList({ entries, onSelect, variant = "vault" }: CatalogLis
               <tr
                 key={entry.id}
                 onClick={() => onSelect(entry)}
-                className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-raised"
+                className={cn(
+                  "cursor-pointer border-b border-border last:border-0 hover:bg-surface-raised",
+                  highlightedIds?.has(entry.id) && "bg-accent-muted",
+                )}
               >
                 <td className="px-4 py-3">
                   <button

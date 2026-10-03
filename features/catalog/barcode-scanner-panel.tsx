@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { apiErrorMessage } from "@/lib/session-expired";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/icons";
 import type { MediaType, UnifiedSearchResult } from "@/types/media";
@@ -131,7 +133,7 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
       const data = await response.json();
 
       if (!response.ok) {
-        setLookupError(data.error ?? "Couldn't look up that barcode.");
+        setLookupError(apiErrorMessage(response, data, "Couldn't look up that barcode."));
         return;
       }
       if (!data.results || data.results.length === 0) {
@@ -212,11 +214,7 @@ export function BarcodeScannerPanel({ mediaType, onResults, onBack }: BarcodeSca
         </div>
       </form>
 
-      {lookupError && (
-        <p role="alert" className="text-sm text-danger">
-          {lookupError}
-        </p>
-      )}
+      {lookupError && <ErrorMessage message={lookupError} />}
 
       <Button type="button" variant="secondary" onClick={onBack} disabled={looking}>
         Back
