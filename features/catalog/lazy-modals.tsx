@@ -3,6 +3,8 @@
 import { type ComponentProps, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { X } from "@/components/ui/icons";
+import { type AddDraft, clearAddDraft, useAddDraft } from "@/lib/add-draft";
 
 // Both modals pull in Radix Dialog, and Item Detail also pulls in Radix
 // Select and floating-ui: about 40 KB gzipped that no page needs until the
@@ -35,14 +37,62 @@ type AddItemButtonProps = Pick<
   "onAdded" | "onOpenExisting" | "primaryOwnership"
 >;
 
-/** The "+ Add item" button, rendered on the server; the dialog loads on first use. */
+/**
+ * The "+ Add item" button, rendered on the server; the dialog loads on first
+ * use. When a pick was left unsaved in the dialog, a "Finish adding" chip
+ * next to it reopens the dialog on that pick.
+ */
 export function AddItemButton({ onAdded, onOpenExisting, primaryOwnership }: AddItemButtonProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // The draft the dialog was last opened on, if it was opened from the chip.
+  // Each resume gets a new id, used as the dialog's key: it reads its draft
+  // when it mounts, so resuming remounts it and a plain open unmounts the
+  // resumed one.
+  const [resumed, setResumed] = useState<{ id: number; draft: AddDraft } | null>(null);
+  const draft = useAddDraft();
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  function openDialog(resume: AddDraft | null) {
+    if (resume) {
+      setResumed({ id: (resumed?.id ?? 0) + 1, draft: resume });
+    } else {
+      // Starting over instead: the chip has been offered and passed up.
+      clearAddDraft();
+      setResumed(null);
+    }
+    setMounted(true);
+    setOpen(true);
+  }
 
   return (
     <>
+      {draft && !open && (
+        // Its own row below the toolbar on phones (the parent row wraps),
+        // before the button from sm up.
+        <div className="order-last flex w-full min-w-0 items-center rounded-full border border-border bg-surface text-sm sm:order-none sm:w-auto">
+          <button
+            type="button"
+            className="focus-ring min-w-0 flex-1 truncate rounded-l-full py-1.5 pl-3 pr-1 text-left sm:max-w-[16rem] text-surface-foreground hover:underline"
+            onPointerEnter={preloadAddItemModal}
+            onFocus={preloadAddItemModal}
+            onClick={() => openDialog(draft)}
+          >
+            Finish adding <span className="font-medium">“{draft.result.title}”</span>
+          </button>
+          <button
+            type="button"
+            aria-label={`Dismiss, don't add “${draft.result.title}”`}
+            className="focus-ring shrink-0 rounded-r-full py-1.5 pl-1 pr-2.5 text-muted-foreground hover:text-surface-foreground"
+            onClick={() => {
+              clearAddDraft();
+              triggerRef.current?.focus();
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <Button
         ref={triggerRef}
         className="shrink-0 whitespace-nowrap"
@@ -50,15 +100,14 @@ export function AddItemButton({ onAdded, onOpenExisting, primaryOwnership }: Add
         aria-expanded={open}
         onPointerEnter={preloadAddItemModal}
         onFocus={preloadAddItemModal}
-        onClick={() => {
-          setMounted(true);
-          setOpen(true);
-        }}
+        onClick={() => openDialog(null)}
       >
         + Add item
       </Button>
       {mounted && (
         <LazyAddItemModal
+          key={resumed?.id ?? 0}
+          draft={resumed?.draft}
           open={open}
           onOpenChange={setOpen}
           returnFocusTo={triggerRef}

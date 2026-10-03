@@ -2,6 +2,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AddItemModal } from "@/features/catalog/add-item-modal";
+import { parseAddDraft } from "@/lib/add-draft";
 import type { UnifiedSearchResult } from "@/types/media";
 
 function result(title: string, mediaType: UnifiedSearchResult["mediaType"]): UnifiedSearchResult {
@@ -90,5 +91,66 @@ describe("AddItemModal search with no results in the chosen type", () => {
 
     expect(await screen.findByRole("button", { name: /Arrival/ })).toBeInTheDocument();
     expect(searchedTypes()).toEqual(["movie"]);
+  });
+});
+
+const readAddDraft = () => parseAddDraft(sessionStorage.getItem("mediavault:add-draft"));
+
+describe("AddItemModal drafts", () => {
+  const celeste = { ...result("Celeste", "GAME"), availablePlatforms: ["Switch", "PC"] };
+
+  function renderWithDraft() {
+    render(
+      <AddItemModal
+        open
+        onOpenChange={() => {}}
+        returnFocusTo={{ current: null }}
+        onAdded={() => {}}
+        draft={{ result: celeste, platforms: ["PC"] }}
+      />,
+    );
+  }
+
+  beforeEach(() => sessionStorage.clear());
+
+  it("opens a draft on the confirm step, with its platforms, and keeps it while unsaved", () => {
+    renderWithDraft();
+
+    expect(screen.getByText("Celeste")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "PC" })).toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Switch" }));
+    expect(readAddDraft()?.platforms).toEqual(["PC", "Switch"]);
+  });
+
+  it("drops the draft on Back", () => {
+    renderWithDraft();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(readAddDraft()).toBeNull();
+  });
+
+  it("drops the draft once saved, and keeps it when the session has expired", async () => {
+    let status = 401;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        status === 401
+          ? new Response(JSON.stringify({ error: "Unauthorized" }), { status })
+          : new Response(JSON.stringify({
+              entry: { id: "e1", status: "PLAN_TO_WATCH", ownership: "OWNED", platforms: ["PC"], mediaItem: celeste },
+            }), {
+              status,
+            }),
+      ),
+    );
+    renderWithDraft();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to vault" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("session expired");
+    expect(readAddDraft()?.result.title).toBe("Celeste");
+
+    status = 201;
+    fireEvent.click(screen.getByRole("button", { name: "Add to vault" }));
+    expect(await screen.findByRole("button", { name: "Add another" })).toBeInTheDocument();
+    expect(readAddDraft()).toBeNull();
   });
 });
