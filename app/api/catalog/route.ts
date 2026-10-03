@@ -68,8 +68,9 @@ export async function GET(request: Request) {
 }
 
 /**
- * Saves a search result into the catalog: upserts the shared MediaItem row,
- * then creates the user's personal progress row linking to it.
+ * Saves a search result into the catalog: creates the shared MediaItem row
+ * if it's new (an existing one is never changed), then creates the user's
+ * personal progress row linking to it.
  */
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
@@ -88,17 +89,13 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
+  // MediaItem is shared by every user, so a request may only create it, never
+  // change it: the metadata comes from the client, and updating here would
+  // let anyone rename or re-cover a title for everyone (even on an add that
+  // is then rejected as a duplicate).
   const mediaItem = await prisma.mediaItem.upsert({
     where: { source_externalId: { source: data.source, externalId: data.externalId } },
-    update: {
-      title: data.title,
-      releaseDate: data.releaseDate ? new Date(data.releaseDate) : null,
-      coverUrl: data.coverUrl ?? null,
-      overview: data.overview ?? null,
-      genres: data.genres ?? [],
-      creator: data.creator ?? null,
-      isbn: data.isbn ?? null,
-    },
+    update: {},
     create: {
       source: data.source,
       externalId: data.externalId,
