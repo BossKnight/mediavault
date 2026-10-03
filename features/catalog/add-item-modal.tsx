@@ -13,6 +13,7 @@ import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
 import { LIST_NAMES } from "@/lib/added-notice";
+import { type AddDraft, clearAddDraft, saveAddDraft } from "@/lib/add-draft";
 import {
   MEDIA_TYPE_LABELS,
   MEDIA_TYPE_NOUNS,
@@ -64,6 +65,9 @@ interface AddItemModalProps {
   // Which list the primary button saves to: the list the user is looking at.
   // The other list is still offered as the secondary action.
   primaryOwnership?: OwnershipStatus;
+  // An unsaved pick to start from, on the confirm step ("Finish adding").
+  // Read once, when the dialog mounts.
+  draft?: AddDraft | null;
 }
 
 /**
@@ -82,9 +86,10 @@ export function AddItemModal({
   onAdded,
   onOpenExisting,
   primaryOwnership = "OWNED",
+  draft,
 }: AddItemModalProps) {
-  const [step, setStep] = useState<Step>("search");
-  const [mediaType, setMediaType] = useState<MediaType>("MOVIE");
+  const [step, setStep] = useState<Step>(draft ? "confirm" : "search");
+  const [mediaType, setMediaType] = useState<MediaType>(draft?.result.mediaType ?? "MOVIE");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 300);
   // Search results this dialog has fetched, by `${type}:${query}`: switching
@@ -97,8 +102,8 @@ export function AddItemModal({
   const resultsCacheRef = useRef<Record<string, UnifiedSearchResult[] | null>>({});
   const [searchFailure, setSearchFailure] = useState<{ key: string; message: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [selected, setSelected] = useState<UnifiedSearchResult | null>(null);
-  const [platforms, setPlatforms] = useState<string[]>([]);
+  const [selected, setSelected] = useState<UnifiedSearchResult | null>(draft?.result ?? null);
+  const [platforms, setPlatforms] = useState<string[]>(draft?.platforms ?? []);
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The user's existing entry for the selected title, when saving found one.
@@ -113,6 +118,13 @@ export function AddItemModal({
   // Identifies one attempt at that search; retryToken makes a retry (or a
   // reopened dialog) a new attempt.
   const searchKey = `${resultsKey}:${retryToken}`;
+
+  // A pick on the confirm step is kept until it's saved or the user goes
+  // back, so closing the dialog (or the session expiring) doesn't lose it:
+  // the page offers it back as "Finish adding".
+  useEffect(() => {
+    if (step === "confirm" && selected) saveAddDraft({ result: selected, platforms });
+  }, [step, selected, platforms]);
 
   useEffect(() => {
     if (!trimmedQuery) return;
@@ -259,10 +271,15 @@ export function AddItemModal({
 
       if (!response.ok) {
         setSaveError(apiErrorMessage(response, data, "Couldn't save this item."));
-        if (response.status === 409 && data.entry) setExistingEntry(data.entry as CatalogEntry);
+        if (response.status === 409 && data.entry) {
+          setExistingEntry(data.entry as CatalogEntry);
+          // Already there: nothing left to finish.
+          clearAddDraft();
+        }
         return;
       }
 
+      clearAddDraft();
       onAdded(data.entry as CatalogEntry);
       setAdded(data.entry as CatalogEntry);
       setStep("added");
@@ -519,6 +536,7 @@ export function AddItemModal({
                   setSaveError(null);
                   setExistingEntry(null);
                   setStep("search");
+                  clearAddDraft();
                 }}
                 disabled={savingAction !== null}
                 className="w-full sm:w-auto"

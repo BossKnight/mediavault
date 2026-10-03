@@ -211,7 +211,7 @@ export function WishlistView({
             onSortChange={setSort}
             sortOptions={SORTS}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ViewToggle value={layout} onChange={setLayout} />
             <AddItemButton
               onAdded={handleAdded}
