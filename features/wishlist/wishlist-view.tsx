@@ -6,12 +6,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { FilterBar } from "@/features/catalog/filter-bar";
 import { CatalogItemCard } from "@/features/catalog/catalog-item-card";
+import { CatalogList } from "@/features/catalog/catalog-list";
+import { ViewToggle } from "@/features/catalog/view-toggle";
+import { useLayoutPreference } from "@/lib/layout-preference";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/icons";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { readMediaTypeParam, readSortParam } from "@/lib/catalog-params";
 import { cn } from "@/lib/utils";
-import type { CatalogEntry, CatalogSort, MediaType } from "@/types/media";
+import type { CatalogEntry, CatalogLayout, CatalogSort, MediaType } from "@/types/media";
 
 // Same code-splitting rationale as the catalog page: neither modal is
 // needed for the initial render.
@@ -31,6 +34,7 @@ interface WishlistViewProps {
   initialEntries: CatalogEntry[];
   initialNextCursor: string | null;
   initialTotal: number;
+  initialLayout: CatalogLayout;
 }
 
 /**
@@ -41,7 +45,12 @@ interface WishlistViewProps {
  * true unfiltered count to tell "wishlist is empty" apart from "no results
  * under the current filter."
  */
-export function WishlistView({ initialEntries, initialNextCursor, initialTotal }: WishlistViewProps) {
+export function WishlistView({
+  initialEntries,
+  initialNextCursor,
+  initialTotal,
+  initialLayout,
+}: WishlistViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -54,6 +63,7 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
     () => readMediaTypeParam(searchParams.get("type")) ?? "ALL",
   );
   const [sort, setSort] = useState<CatalogSort>(() => readSortParam(searchParams.get("sort")));
+  const [layout, setLayout] = useLayoutPreference(initialLayout);
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null);
   const [loadingPage, setLoadingPage] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -199,7 +209,10 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
             onSortChange={setSort}
             sortOptions={SORTS}
           />
-          <AddItemModal onAdded={handleAdded} primaryOwnership="WISHLIST" />
+          <div className="flex items-center gap-2">
+            <ViewToggle value={layout} onChange={setLayout} />
+            <AddItemModal onAdded={handleAdded} primaryOwnership="WISHLIST" />
+          </div>
         </div>
       )}
 
@@ -248,23 +261,28 @@ export function WishlistView({ initialEntries, initialNextCursor, initialTotal }
         <EmptyState hasAnyEntries onClearFilters={handleClearFilters} onAdded={handleAdded} />
       ) : (
         <div
-          // inert also blocks keyboard focus on cards that are about to be
+          // inert also blocks keyboard focus on items that are about to be
           // replaced, which pointer-events-none alone doesn't.
           inert={loadingPage || undefined}
           aria-busy={loadingPage}
           className={cn(
-            "grid grid-cols-2 gap-4 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
+            "transition-opacity",
+            layout === "grid" && "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6",
             (loadingPage || loadError) && "opacity-50",
           )}
         >
-          {entries.map((entry, index) => (
-            <CatalogItemCard
-              key={entry.id}
-              entry={entry}
-              onSelect={setSelectedEntry}
-              priority={index < PRIORITY_ROW_SIZE}
-            />
-          ))}
+          {layout === "list" ? (
+            <CatalogList entries={entries} onSelect={setSelectedEntry} variant="wishlist" />
+          ) : (
+            entries.map((entry, index) => (
+              <CatalogItemCard
+                key={entry.id}
+                entry={entry}
+                onSelect={setSelectedEntry}
+                priority={index < PRIORITY_ROW_SIZE}
+              />
+            ))
+          )}
         </div>
       )}
 

@@ -133,6 +133,9 @@ export interface CatalogStats {
 }
 
 /** How the catalog grid orders entries. Defaults to "recent". */
+/** How the vault is laid out: cover thumbnails or a text list. */
+export type CatalogLayout = "grid" | "list";
+
 export type CatalogSort = "recent" | "title" | "rating";
 
 export const CATALOG_SORT_LABELS: Record<CatalogSort, string> = {
