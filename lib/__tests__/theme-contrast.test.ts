@@ -120,6 +120,10 @@ const PAIRINGS: [string, string, number][] = [
   ["surface-foreground", "accent-muted", TEXT],
   ["muted-foreground", "accent-muted", TEXT],
   ["success-foreground", "success", TEXT],
+  // Badges (components/ui/badge.tsx), also shown over cover art.
+  ["success-muted-foreground", "success-muted", TEXT],
+  ["warning-muted-foreground", "warning-muted", TEXT],
+  ["danger-muted-foreground", "danger-muted", TEXT],
   ["warning-foreground", "warning", TEXT],
   ["danger-foreground", "danger", TEXT],
   ...pageBackgrounds.map((bg): [string, string, number] => ["border", bg, NON_TEXT]),

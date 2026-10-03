@@ -136,14 +136,22 @@
 
   --success: var(--color-success-default);
   --success-foreground: var(--if-light, var(--color-white)) var(--if-dark, var(--color-neutral-50));
+  --success-muted: var(--color-success-light);
+  --success-muted-foreground: var(--color-success-dark);
 
   /* The -dark shade, not amber: warning is also used as text, and amber
      can't reach 4.5:1 on a light page. */
+  /* The -muted pairs are opaque tinted fills (badges): unlike a /15 tint,
+     they read the same over cover art as over the page. */
   --warning: var(--color-warning-dark);
   --warning-foreground: var(--if-light, var(--color-white)) var(--if-dark, var(--color-neutral-50));
+  --warning-muted: var(--color-warning-light);
+  --warning-muted-foreground: var(--color-warning-dark);
 
   --danger: var(--color-error-default);
   --danger-foreground: var(--if-light, var(--color-white)) var(--if-dark, var(--color-neutral-50));
+  --danger-muted: var(--color-error-light);
+  --danger-muted-foreground: var(--color-error-dark);
 
   --radius-card: 0.75rem;
 }

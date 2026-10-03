@@ -38,14 +38,20 @@ const config: Config = {
         success: {
           DEFAULT: themeColor("--success"),
           foreground: themeColor("--success-foreground"),
+          muted: themeColor("--success-muted"),
+          "muted-foreground": themeColor("--success-muted-foreground"),
         },
         warning: {
           DEFAULT: themeColor("--warning"),
           foreground: themeColor("--warning-foreground"),
+          muted: themeColor("--warning-muted"),
+          "muted-foreground": themeColor("--warning-muted-foreground"),
         },
         danger: {
           DEFAULT: themeColor("--danger"),
           foreground: themeColor("--danger-foreground"),
+          muted: themeColor("--danger-muted"),
+          "muted-foreground": themeColor("--danger-muted-foreground"),
         },
       },
       fontFamily: {
