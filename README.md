@@ -99,9 +99,17 @@ After pulling this change, run `npm run prisma:migrate`: it only adds the `platf
 Existing single values in the old `platform` column keep showing (as a one-item list) and move
 to `platforms` the next time each entry is saved, so no data is lost.
 
+## Title details
+
+A title's shared details (name, cover, overview, genres, creator) come from its provider (TMDB,
+RAWG or Open Library), fetched by the server, not from what the browser sends. If the provider
+can't be reached or isn't configured when a new title is added, the search result is used
+instead, and only for that new title. A title is re-fetched when someone adds it after 30 days,
+or on demand with **Refresh details** in its dialog (rate limited per user).
+
 ## Rate limiting
 
-Sign-up, sign-in, and barcode lookups are rate limited (see `lib/rate-limit.ts`). Counts live
+Sign-up, sign-in, barcode lookups, and title refreshes are rate limited (see `lib/rate-limit.ts`). Counts live
 in the `RateLimit` table, so they're shared across every app instance; after pulling this
 change, run `npm run prisma:migrate` to create it.
 

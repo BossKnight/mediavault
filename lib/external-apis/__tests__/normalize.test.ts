@@ -3,7 +3,10 @@ import {
   normalizeGoogleBooksVolume,
   normalizeOpenLibraryBookData,
   normalizeOpenLibrarySearchDoc,
+  normalizeOpenLibraryWork,
+  normalizeRawgDetails,
   normalizeRawgResult,
+  normalizeTmdbDetails,
   normalizeTmdbResult,
 } from "@/lib/external-apis/normalize";
 
@@ -301,5 +304,93 @@ describe("normalizeGoogleBooksVolume", () => {
     });
 
     expect(result.coverUrl).toBe("https://books.google.com/cover.jpg");
+  });
+});
+
+describe("normalizeTmdbDetails", () => {
+  it("reads genre names from the details payload's genre objects", () => {
+    const result = normalizeTmdbDetails(
+      {
+        id: 1399,
+        name: "Game of Thrones",
+        first_air_date: "2011-04-17",
+        overview: "Seven noble families fight for control.",
+        poster_path: "/got.jpg",
+        genres: [{ name: "Sci-Fi & Fantasy" }, { name: "Drama" }],
+      },
+      "TV",
+    );
+
+    expect(result).toMatchObject({
+      source: "TMDB",
+      externalId: "1399",
+      mediaType: "TV",
+      title: "Game of Thrones",
+      releaseDate: "2011-04-17",
+      coverUrl: "https://image.tmdb.org/t/p/w500/got.jpg",
+      genres: ["Sci-Fi & Fantasy", "Drama"],
+    });
+  });
+});
+
+describe("normalizeRawgDetails", () => {
+  it("adds the description and first developer that search results lack", () => {
+    const result = normalizeRawgDetails({
+      id: 5286,
+      name: "Destroy All Humans!",
+      released: "2005-06-21",
+      background_image: "https://media.rawg.io/dah.jpg",
+      genres: [{ name: "Action" }],
+      description_raw: "  Play as Crypto, an alien invader.  ",
+      developers: [{ name: "Pandemic Studios" }, { name: "Other" }],
+    });
+
+    expect(result).toMatchObject({
+      externalId: "5286",
+      overview: "Play as Crypto, an alien invader.",
+      creator: "Pandemic Studios",
+      genres: ["Action"],
+    });
+  });
+
+  it("leaves overview and creator null when RAWG has neither", () => {
+    const result = normalizeRawgDetails({ id: 1, name: "Bare", description_raw: "  " });
+    expect(result.overview).toBeNull();
+    expect(result.creator).toBeNull();
+  });
+});
+
+describe("normalizeOpenLibraryWork", () => {
+  it("reads an object description, the first real cover and the author", () => {
+    const result = normalizeOpenLibraryWork(
+      "OL893415W",
+      {
+        title: "Dune",
+        description: { value: "Arrakis, the desert planet." },
+        covers: [-1, 11481354],
+        subjects: ["Science fiction", "Deserts", "Ecology", "Politics", "Religion", "Spice", "Extra"],
+        first_publish_date: "August 1965",
+      },
+      "Frank Herbert",
+    );
+
+    expect(result).toEqual({
+      source: "OPENLIBRARY",
+      externalId: "OL893415W",
+      mediaType: "BOOK",
+      title: "Dune",
+      releaseDate: "1965-01-01",
+      coverUrl: "https://covers.openlibrary.org/b/id/11481354-M.jpg",
+      overview: "Arrakis, the desert planet.",
+      genres: ["Science fiction", "Deserts", "Ecology", "Politics", "Religion", "Spice"],
+      creator: "Frank Herbert",
+      isbn: null,
+    });
+  });
+
+  it("accepts a plain string description and a work with no covers", () => {
+    const result = normalizeOpenLibraryWork("OL1W", { title: "X", description: "Plain." }, null);
+    expect(result.overview).toBe("Plain.");
+    expect(result.coverUrl).toBeNull();
   });
 });

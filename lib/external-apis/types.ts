@@ -18,10 +18,14 @@ export interface TmdbSearchResponse {
   results: TmdbMovieResult[];
 }
 
-// RAWG's /games search endpoint (what searchRawg calls) does not include
-// developer info: that only exists on the separate /games/{id} details
-// endpoint, which nothing here calls. Don't add a `developers` field back
-// without also adding that lookup, or it'll silently stay unpopulated.
+// TMDB's /movie/{id} and /tv/{id} details endpoints (getTmdbDetails). Genres
+// come back as objects here, not the ids search results use.
+export interface TmdbDetails extends Omit<TmdbMovieResult, "genre_ids"> {
+  genres?: { name: string }[];
+}
+
+// RAWG's /games search endpoint (searchRawg) has no description or
+// developer; only the /games/{id} details endpoint below does.
 export interface RawgGame {
   id: number;
   name: string;
@@ -32,6 +36,12 @@ export interface RawgGame {
 
 export interface RawgSearchResponse {
   results: RawgGame[];
+}
+
+// RAWG's /games/{id} details endpoint (getRawgDetails).
+export interface RawgGameDetails extends RawgGame {
+  description_raw?: string | null;
+  developers?: { name: string }[];
 }
 
 // Open Library's /search.json endpoint (searchOpenLibrary). Each "doc" is a
@@ -62,6 +72,22 @@ export interface OpenLibraryBookData {
 }
 
 export type OpenLibraryIsbnResponse = Record<string, OpenLibraryBookData>;
+
+// Open Library's /works/{id}.json endpoint (getOpenLibraryWork): the same
+// work a search result points at. Authors are only keys here; their names
+// need a separate /authors/{id}.json call.
+export interface OpenLibraryWork {
+  title?: string;
+  description?: string | { value?: string };
+  covers?: number[];
+  subjects?: string[];
+  first_publish_date?: string;
+  authors?: { author?: { key?: string } }[];
+}
+
+export interface OpenLibraryAuthor {
+  name?: string;
+}
 
 // Google Books' /volumes endpoint — used only to backfill a cover or
 // description Open Library is missing for a given ISBN.

@@ -1,6 +1,6 @@
 import type { UnifiedSearchResult } from "@/types/media";
-import { normalizeTmdbResult } from "./normalize";
-import type { TmdbSearchResponse } from "./types";
+import { normalizeTmdbDetails, normalizeTmdbResult } from "./normalize";
+import type { TmdbDetails, TmdbSearchResponse } from "./types";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
@@ -50,4 +50,32 @@ export async function searchTmdb(
 
   const data = (await response.json()) as TmdbSearchResponse;
   return data.results.map((result) => normalizeTmdbResult(result, mediaType));
+}
+
+/**
+ * Fetches one movie or TV show by its TMDB id. Returns null when TMDB has no
+ * such title; throws when TMDB can't be reached or isn't configured.
+ */
+export async function getTmdbDetails(
+  id: string,
+  mediaType: "MOVIE" | "TV",
+): Promise<UnifiedSearchResult | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    throw new Error("TMDB_API_KEY is not configured");
+  }
+
+  const endpoint = mediaType === "MOVIE" ? "movie" : "tv";
+  const url = new URL(`${TMDB_BASE_URL}/${endpoint}/${encodeURIComponent(id)}`);
+  url.searchParams.set("api_key", apiKey);
+
+  // Only called when adding a new title or refreshing one on request, so
+  // it should see TMDB's current data rather than a cached copy.
+  const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new TmdbApiError(`TMDB details failed with status ${response.status}`, response.status);
+  }
+
+  return normalizeTmdbDetails((await response.json()) as TmdbDetails, mediaType);
 }

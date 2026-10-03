@@ -55,6 +55,17 @@ export function ChevronDown(props: IconProps) {
   );
 }
 
+export function Refresh(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+      <path d="M3 21v-5h5" />
+      <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
+  );
+}
+
 export function Loader(props: IconProps) {
   return (
     <svg {...base} {...props} className={`animate-spin ${props.className ?? ""}`}>
