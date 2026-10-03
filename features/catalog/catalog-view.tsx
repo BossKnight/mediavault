@@ -243,7 +243,7 @@ export function CatalogView({
               sort={sort}
               onSortChange={setSort}
             />
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:has-[[data-add-draft]]:flex-wrap lg:has-[[data-add-draft]]:flex-nowrap">
               <ViewToggle value={layout} onChange={setLayout} />
               <AddItemButton onAdded={handleAdded} onOpenExisting={setSelectedEntry} />
             </div>

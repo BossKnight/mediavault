@@ -34,18 +34,43 @@ const toHsl = (m: RegExpMatchArray, offset: number): Hsl => [
 
 type Mode = "light" | "dark";
 
-/** :root tokens resolved for one mode via the --if-light / --if-dark switches. */
-function baseTokens(mode: Mode): Tokens {
-  const tokens: Tokens = {};
-  const pair = new RegExp(`^var\\(--if-light, ${HSL}\\) var\\(--if-dark, ${HSL}\\)$`);
-  for (const [name, value] of declarations(block(":root") ?? "")) {
-    const match = value.match(pair);
-    if (match) tokens[name] = toHsl(match, mode === "light" ? 1 : 4);
+const IF_MODE = /^var\(--if-light, (.+?)\) var\(--if-dark, (.+)\)$/;
+const REF = /^var\(--([\w-]+)\)$/;
+const LITERAL = new RegExp(`^${HSL}$`);
+
+/**
+ * Resolves one declared value for a mode: picks the --if-light/--if-dark
+ * branch, follows var(--token) references, and parses the HSL triple.
+ */
+function resolve(value: string, mode: Mode, declared: Map<string, string>, seen: string[] = []): Hsl {
+  const branch = value.match(IF_MODE);
+  if (branch) return resolve((mode === "light" ? branch[1] : branch[2]) ?? "", mode, declared, seen);
+  const ref = value.match(REF);
+  if (ref) {
+    const name = ref[1] ?? "";
+    const target = declared.get(name);
+    if (target === undefined || seen.includes(name)) throw new Error(`Can't resolve --${name}`);
+    return resolve(target, mode, declared, [...seen, name]);
   }
-  return tokens;
+  const literal = value.match(LITERAL);
+  if (!literal) throw new Error(`Unparsed value "${value}"`);
+  return toHsl(literal, 1);
 }
 
-/** A theme: its base mode's tokens with its own block's overrides applied. */
+/**
+ * A theme's tokens: the :root declarations, with its own block's overrides
+ * (palette steps or semantic tokens) applied, resolved in its base mode.
+ */
+function resolveTokens(mode: Mode, overrides: [string, string][] = []): Tokens {
+  // Colors only: skip the mode switches and sizes like --radius-card.
+  const isColor = ([name]: [string, string]) => !name.startsWith("if-") && !name.startsWith("radius-");
+  const declared = new Map(declarations(block(":root") ?? "").filter(isColor));
+  for (const [name, value] of overrides.filter(isColor)) declared.set(name, value);
+  return Object.fromEntries([...declared.keys()].map((name) => [name, resolve(declared.get(name)!, mode, declared)]));
+}
+
+const baseTokens = (mode: Mode) => resolveTokens(mode);
+
 function themeTokens(theme: string): Tokens {
   const body = block(`:root.theme-${theme}`);
   if (body === null) {
@@ -53,12 +78,7 @@ function themeTokens(theme: string): Tokens {
     return baseTokens("light");
   }
   const mode: Mode = /--if-dark:\s*initial/.test(body) ? "dark" : "light";
-  const tokens = baseTokens(mode);
-  for (const [name, value] of declarations(body)) {
-    const match = value.match(new RegExp(`^${HSL}$`));
-    if (match) tokens[name] = toHsl(match, 1);
-  }
-  return tokens;
+  return resolveTokens(mode, declarations(body));
 }
 
 function luminance([h, s, l]: Hsl) {
@@ -105,6 +125,58 @@ const PAIRINGS: [string, string, number][] = [
   ...pageBackgrounds.map((bg): [string, string, number] => ["border", bg, NON_TEXT]),
 ];
 
+// The palette's own intended pairings (--color-*), so a step changed in a
+// later edit can't quietly break a combination components may adopt.
+// Semantic shades: -dark is text, -light the tinted background, -default
+// the fill or icon. Warning's amber -default is fill-only in light mode
+// (with dark text on it), so it has no "on the page" row.
+const ON_FILL: Record<Mode, string> = { light: "color-white", dark: "color-neutral-50" };
+const PALETTE_SURFACES: Record<Mode, string[]> = {
+  light: ["color-white", "color-neutral-50", "color-neutral-100"],
+  dark: ["color-neutral-50", "color-neutral-100", "color-neutral-200"],
+};
+const STATUSES = ["success", "warning", "error", "info"];
+function palettePairings(mode: Mode): [string, string, number][] {
+  const onSurfaces = (fg: string, min: number) =>
+    PALETTE_SURFACES[mode].map((bg): [string, string, number] => [fg, bg, min]);
+  return [
+    ...["neutral-900", "neutral-700", "neutral-600", "primary-600", "secondary-600"].flatMap((fg) =>
+      onSurfaces(`color-${fg}`, TEXT),
+    ),
+    // Placeholders: inputs sit on white (or neutral-50) only.
+    ...onSurfaces("color-neutral-500", TEXT).filter(([, bg]) => bg !== "color-neutral-100"),
+    ...onSurfaces("color-neutral-500", NON_TEXT),
+    ...onSurfaces("color-primary-500", NON_TEXT),
+    ...["primary", "secondary"].flatMap((family): [string, string, number][] => [
+      [ON_FILL[mode], `color-${family}-600`, TEXT],
+      [ON_FILL[mode], `color-${family}-700`, TEXT],
+      [`color-${family}-800`, `color-${family}-100`, TEXT],
+      ["color-neutral-900", `color-${family}-50`, TEXT],
+    ]),
+    ...STATUSES.flatMap((status): [string, string, number][] => [
+      [`color-${status}-dark`, `color-${status}-light`, TEXT],
+      ["color-neutral-900", `color-${status}-light`, TEXT],
+      [status === "warning" ? "color-neutral-900" : ON_FILL[mode], `color-${status}-default`, TEXT],
+      ...onSurfaces(`color-${status}-dark`, TEXT),
+      ...(status === "warning" && mode === "light" ? [] : onSurfaces(`color-${status}-default`, NON_TEXT)),
+    ]),
+  ].map(([fg, bg, min]): [string, string, number] =>
+    // Text on amber is dark ink in both modes: neutral-900 in light, neutral-50 in dark.
+    fg === "color-neutral-900" && bg === "color-warning-default" && mode === "dark"
+      ? ["color-neutral-50", bg, min]
+      : [fg, bg, min],
+  );
+}
+
+describe("palette", () => {
+  describe.each(["light", "dark"] as const)("%s mode", (mode) => {
+    const tokens = baseTokens(mode);
+    it.each(palettePairings(mode))("%s on %s meets %s:1", (fg, bg, min) => {
+      expect(contrast(tokens[fg]!, tokens[bg]!)).toBeGreaterThanOrEqual(min);
+    });
+  });
+});
+
 describe("theme tokens", () => {
   it("parses a full token set for every theme", () => {
     for (const theme of THEMES) {
@@ -114,7 +186,9 @@ describe("theme tokens", () => {
 
   it("covers every color token with at least one pairing", () => {
     const paired = new Set(PAIRINGS.flatMap(([fg, bg]) => [fg, bg]));
-    const unpaired = Object.keys(baseTokens("light")).filter((name) => !paired.has(name));
+    const unpaired = Object.keys(baseTokens("light")).filter(
+      (name) => !name.startsWith("color-") && !paired.has(name),
+    );
     expect(unpaired).toEqual([]);
   });
 
