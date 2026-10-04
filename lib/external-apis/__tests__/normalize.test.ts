@@ -325,6 +325,13 @@ describe("normalizeGoogleBooksVolume", () => {
 });
 
 describe("normalizeTmdbDetails", () => {
+  it("offers a show's season count, and none for movies", () => {
+    const show = normalizeTmdbDetails({ id: 60573, name: "Silicon Valley", number_of_seasons: 6 }, "TV");
+    expect(show.seasonCount).toBe(6);
+    expect(normalizeTmdbDetails({ id: 60573, name: "Unaired", number_of_seasons: 0 }, "TV")).not.toHaveProperty("seasonCount");
+    expect(normalizeTmdbDetails({ id: 1, title: "Dogma", number_of_seasons: 3 }, "MOVIE")).not.toHaveProperty("seasonCount");
+  });
+
   it("reads genre names from the details payload's genre objects", () => {
     const result = normalizeTmdbDetails(
       {

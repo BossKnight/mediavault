@@ -278,3 +278,62 @@ describe("AddItemModal repeat adds", () => {
     expect(vi.mocked(fetch).mock.calls.filter(([, init]) => !init?.method).length).toBe(1);
   });
 });
+
+describe("AddItemModal seasons", () => {
+  const show = { ...result("Silicon Valley", "TV"), externalId: "60573", releaseDate: "2014-04-06" };
+  let posted: Record<string, unknown> | null;
+
+  function renderShow(details: () => Response) {
+    posted = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          posted = JSON.parse(String(init.body));
+          const entry = { id: "e1", status: "PLAN_TO_WATCH", ownership: "OWNED", platforms: posted!.platforms, ownedSeasons: posted!.ownedSeasons, completeSeries: posted!.completeSeries, mediaItem: show };
+          return new Response(JSON.stringify({ entry }), { status: 201 });
+        }
+        return details();
+      }),
+    );
+    render(
+      <AddItemModal open onOpenChange={() => {}} returnFocusTo={{ current: null }} onAdded={() => {}} draft={{ result: show, platforms: [] }} />,
+    );
+  }
+
+  beforeEach(() => sessionStorage.clear());
+
+  it("offers a chip per season and saves the ones picked", async () => {
+    renderShow(() => new Response(JSON.stringify({ result: { ...show, seasonCount: 6 } })));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Season 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Season 5" }));
+    expect(screen.getAllByRole("button", { name: /^Season \d$/ })).toHaveLength(6);
+    expect(screen.getByRole("button", { name: "Season 5" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Blu-Ray" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "DVD" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to vault" }));
+    await act(() => vi.advanceTimersByTimeAsync(400));
+    expect(posted).toMatchObject({ ownedSeasons: [4, 5], completeSeries: false });
+    expect(screen.getByText("In backlog · Seasons 4–5 · Blu-Ray, DVD")).toBeInTheDocument();
+  });
+
+  it("takes typed season numbers when the count can't be looked up", async () => {
+    renderShow(() => new Response(JSON.stringify({ error: "down" }), { status: 502 }));
+
+    const input = await screen.findByLabelText("Season numbers");
+    fireEvent.change(input, { target: { value: "4, 5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to vault" }));
+    await act(() => vi.advanceTimersByTimeAsync(400));
+    expect(posted).toMatchObject({ ownedSeasons: [4, 5] });
+  });
+
+  it("sends no seasons to the wishlist", async () => {
+    renderShow(() => new Response(JSON.stringify({ result: { ...show, seasonCount: 6 } })));
+    fireEvent.click(await screen.findByRole("button", { name: "Season 4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to wishlist" }));
+    await act(() => vi.advanceTimersByTimeAsync(400));
+    expect(posted).not.toHaveProperty("ownedSeasons");
+  });
+});

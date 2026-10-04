@@ -81,9 +81,11 @@ export function normalizeTmdbDetails(
   details: TmdbDetails,
   mediaType: "MOVIE" | "TV",
 ): UnifiedSearchResult {
+  const seasons = details.number_of_seasons ?? 0;
   return {
     ...normalizeTmdbResult({ ...details, genre_ids: [] }, mediaType),
     genres: (details.genres ?? []).map((genre) => genre.name),
+    ...(mediaType === "TV" && Number.isInteger(seasons) && seasons > 0 ? { seasonCount: seasons } : {}),
   };
 }
 

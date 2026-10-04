@@ -22,6 +22,8 @@ export interface TmdbSearchResponse {
 // come back as objects here, not the ids search results use.
 export interface TmdbDetails extends Omit<TmdbMovieResult, "genre_ids"> {
   genres?: { name: string }[];
+  // TV only: how many seasons the show has aired (or announced).
+  number_of_seasons?: number | null;
 }
 
 // RAWG's /games search endpoint (searchRawg) has no description or

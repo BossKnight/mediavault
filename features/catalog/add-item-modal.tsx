@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { PlatformField } from "@/features/catalog/platform-field";
+import { SeasonPicker, type SeasonSelection } from "@/features/catalog/season-picker";
 import { Camera, Check, Loader, Search } from "@/components/ui/icons";
 import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
 import { LIST_NAMES } from "@/lib/added-notice";
 import { summarizePlatforms } from "@/lib/platforms";
+import { describeSeasons } from "@/lib/seasons";
 import { type AddDraft, clearAddDraft, saveAddDraft } from "@/lib/add-draft";
 import {
   MEDIA_TYPE_LABELS,
@@ -128,6 +130,14 @@ export function AddItemModal({
   );
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(draft?.result ?? null);
   const [platforms, setPlatforms] = useState<string[]>(draft?.platforms ?? []);
+  const [seasonSelection, setSeasonSelection] = useState<SeasonSelection>({
+    seasons: draft?.seasons ?? [],
+    completeSeries: draft?.completeSeries ?? false,
+  });
+  // Season counts looked up for the shows picked in this dialog, by result
+  // key: a number, or null when the lookup failed (the picker then takes
+  // typed numbers instead of chips).
+  const [seasonCounts, setSeasonCounts] = useState<Record<string, number | null>>({});
   // The save button that was pressed, and its look: loading while saving,
   // success for a moment after, error (a shake) when the input was rejected.
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
@@ -152,8 +162,35 @@ export function AddItemModal({
   // back, so closing the dialog (or the session expiring) doesn't lose it:
   // the page offers it back as "Finish adding".
   useEffect(() => {
-    if (step === "confirm" && selected) saveAddDraft({ result: selected, platforms });
-  }, [step, selected, platforms]);
+    if (step === "confirm" && selected) {
+      saveAddDraft({ result: selected, platforms, ...seasonSelection });
+    }
+  }, [step, selected, platforms, seasonSelection]);
+
+  // Search results don't say how many seasons a show has, so look it up
+  // when one is picked, to offer a chip per season.
+  const selectedKey = selected ? resultKey(selected) : null;
+  const needsSeasonCount =
+    step === "confirm" &&
+    selected?.mediaType === "TV" &&
+    selected.seasonCount === undefined &&
+    selectedKey !== null &&
+    !(selectedKey in seasonCounts);
+  useEffect(() => {
+    if (!needsSeasonCount || !selected || !selectedKey) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ source: selected.source, type: "tv", id: selected.externalId });
+    fetch(`/api/search/details?${params}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("lookup failed"))))
+      .then((data: { result: UnifiedSearchResult | null }) =>
+        setSeasonCounts((counts) => ({ ...counts, [selectedKey]: data.result?.seasonCount ?? null })),
+      )
+      .catch(() => {
+        if (!controller.signal.aborted) setSeasonCounts((counts) => ({ ...counts, [selectedKey]: null }));
+      });
+    return () => controller.abort();
+  }, [needsSeasonCount, selected, selectedKey]);
+  const seasonCount = selected?.seasonCount ?? (selectedKey ? seasonCounts[selectedKey] : undefined);
 
   useEffect(() => {
     if (!trimmedQuery) return;
@@ -245,6 +282,7 @@ export function AddItemModal({
     setExistingEntry(null);
     setAdded(null);
     setPlatforms([]);
+    setSeasonSelection({ seasons: [], completeSeries: false });
   }
 
   /** Closing the dialog: everything goes, so reopening searches afresh. */
@@ -320,6 +358,9 @@ export function AddItemModal({
           // A wishlist item has no physical copy yet, so there's no format
           // or platform to record — whatever's in the field is ignored.
           platforms: ownership === "OWNED" ? platforms : [],
+          ...(selected.mediaType === "TV" && ownership === "OWNED"
+            ? { ownedSeasons: seasonSelection.seasons, completeSeries: seasonSelection.completeSeries }
+            : {}),
         }),
       });
       const data = await response.json();
@@ -596,6 +637,16 @@ export function AddItemModal({
               </div>
             </div>
 
+            {selected.mediaType === "TV" && (
+              <SeasonPicker
+                key={resultKey(selected)}
+                seasonCount={seasonCount}
+                seasons={seasonSelection.seasons}
+                completeSeries={seasonSelection.completeSeries}
+                onChange={setSeasonSelection}
+              />
+            )}
+
             <PlatformField
               key={`${selected.source}:${selected.mediaType}:${selected.externalId}`}
               mediaType={selected.mediaType}
@@ -672,8 +723,13 @@ export function AddItemModal({
                     Wishlist items show neither, here or elsewhere. */}
                 {added.ownership === "OWNED" && (
                   <p className="text-sm text-muted-foreground">
-                    {getStatusLabel(added.status, added.mediaItem.mediaType)}
-                    {added.platforms.length > 0 && ` · ${added.platforms.join(", ")}`}
+                    {[
+                      getStatusLabel(added.status, added.mediaItem.mediaType),
+                      describeSeasons(added.ownedSeasons ?? [], added.completeSeries),
+                      added.platforms.join(", "),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 )}
               </div>
