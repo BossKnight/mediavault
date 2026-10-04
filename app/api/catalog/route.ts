@@ -42,9 +42,20 @@ const createCatalogSchema = z.object({
     .max(MAX_PLATFORMS, `List at most ${MAX_PLATFORMS} platforms or formats`)
     .transform(normalizePlatforms)
     .optional(),
+  // TV only, and only for the vault: which seasons are owned, or all of
+  // them. Ignored for other media types and for the wishlist.
+  ownedSeasons: z.array(z.number().int().min(1).max(500)).max(500).optional(),
+  completeSeries: z.boolean().optional(),
 });
 
 const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
+
+/** The seasons to store for a new entry: owned TV only; "complete" means every season. */
+function ownedSeasonsData(data: z.infer<typeof createCatalogSchema>) {
+  if (data.mediaType !== "TV" || (data.ownership ?? "OWNED") !== "OWNED") return {};
+  if (data.completeSeries) return { completeSeries: true, ownedSeasons: [] };
+  return { ownedSeasons: [...new Set(data.ownedSeasons ?? [])].sort((a, b) => a - b) };
+}
 
 /**
  * Lists one page of the current user's catalog, with optional status /
@@ -152,6 +163,7 @@ export async function POST(request: Request) {
         status: data.status ?? "PLAN_TO_WATCH",
         ownership: data.ownership ?? "OWNED",
         platforms: data.platforms ?? [],
+        ...ownedSeasonsData(data),
       },
       include: catalogEntryInclude,
     });

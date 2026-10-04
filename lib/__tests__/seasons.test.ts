@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSeasonList, parseSeasonInput, parseSeasonList } from "@/lib/seasons";
+import { describeSeasons, formatSeasonList, parseSeasonInput, parseSeasonList } from "@/lib/seasons";
 
 describe("parseSeasonList", () => {
   it("parses comma-separated season numbers", () => {
@@ -48,5 +48,19 @@ describe("formatSeasonList", () => {
 
   it("returns an empty string for an empty list", () => {
     expect(formatSeasonList([])).toBe("");
+  });
+});
+
+describe("describeSeasons", () => {
+  it("collapses runs of seasons", () => {
+    expect(describeSeasons([4])).toBe("Season 4");
+    expect(describeSeasons([5, 4])).toBe("Seasons 4–5");
+    expect(describeSeasons([1, 2, 3, 6])).toBe("Seasons 1–3, 6");
+    expect(describeSeasons([1, 3, 5])).toBe("Seasons 1, 3, 5");
+  });
+
+  it("says complete series, or nothing", () => {
+    expect(describeSeasons([], true)).toBe("Complete series");
+    expect(describeSeasons([])).toBe("");
   });
 });

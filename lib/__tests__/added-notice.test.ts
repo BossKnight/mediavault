@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addedNoticeMessage, entryMatchesFilters } from "@/lib/added-notice";
+import { addedNoticeMessage, distinctTitles, entryMatchesFilters } from "@/lib/added-notice";
 import type { CatalogEntry } from "@/types/media";
 
 function entry(title: string, mediaType: CatalogEntry["mediaItem"]["mediaType"] = "MOVIE"): CatalogEntry {
@@ -40,5 +40,21 @@ describe("entryMatchesFilters", () => {
     expect(entryMatchesFilters(entry("Halo", "GAME"), { mediaType: "BOOK" })).toBe(false);
     expect(entryMatchesFilters(entry("Halo"), { status: "PLAN_TO_WATCH" })).toBe(true);
     expect(entryMatchesFilters(entry("Halo"), { status: "COMPLETED" })).toBe(false);
+  });
+});
+
+describe("distinctTitles", () => {
+  const entry = (title: string, releaseDate: string | null) =>
+    ({ mediaItem: { title, releaseDate } }) as unknown as CatalogEntry;
+
+  it("adds the year only where titles repeat", () => {
+    const titles = distinctTitles([
+      entry("Paper Mario: The Thousand-Year Door", "2004-07-22"),
+      entry("Paper Mario: The Thousand-Year Door", "2024-05-23"),
+    ]);
+    expect(addedNoticeMessage(titles, "OWNED")).toBe(
+      "Added “Paper Mario: The Thousand-Year Door” (2004) and “Paper Mario: The Thousand-Year Door” (2024) to your vault.",
+    );
+    expect(distinctTitles([entry("Dogma", "1999-11-12"), entry("Alien", "1979-05-25")])).toEqual(["Dogma", "Alien"]);
   });
 });

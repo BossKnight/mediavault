@@ -171,6 +171,27 @@ describe("POST /api/catalog", () => {
     expect(create.mock.calls[0]![0].data.mediaItemId).toBe("media-1");
   });
 
+  it("saves the seasons owned for a TV show in the vault", async () => {
+    const show = { ...validBody, source: "TMDB", externalId: "60573", mediaType: "TV", platforms: [] };
+    lookupMediaDetails.mockResolvedValue({ ...providerResult, ...show, title: "Silicon Valley" });
+
+    await POST(addRequest({ ...show, ownedSeasons: [5, 4, 4] }));
+    expect(create.mock.calls[0]![0].data).toMatchObject({ ownedSeasons: [4, 5] });
+
+    await POST(addRequest({ ...show, ownedSeasons: [4], completeSeries: true }));
+    expect(create.mock.calls[1]![0].data).toMatchObject({ ownedSeasons: [], completeSeries: true });
+  });
+
+  it("ignores seasons on the wishlist and on other media types", async () => {
+    await POST(addRequest({ ...validBody, ownedSeasons: [1] }));
+    expect(create.mock.calls[0]![0].data).not.toHaveProperty("ownedSeasons");
+
+    const show = { ...validBody, source: "TMDB", externalId: "60573", mediaType: "TV", platforms: [] };
+    lookupMediaDetails.mockResolvedValue({ ...providerResult, ...show });
+    await POST(addRequest({ ...show, ownership: "WISHLIST", ownedSeasons: [1] }));
+    expect(create.mock.calls[1]![0].data).not.toHaveProperty("ownedSeasons");
+  });
+
   it("saves the platforms trimmed and de-duplicated", async () => {
     await POST(addRequest(validBody));
 

@@ -101,6 +101,9 @@ export interface UnifiedSearchResult {
   // Game only: the platforms it was released on, offered as choices when
   // adding it. Not stored (the catalog API ignores it).
   availablePlatforms?: string[];
+  // TV only, from the details lookup (search results don't have it): how
+  // many seasons to offer when adding the show. Not stored either.
+  seasonCount?: number;
 }
 
 /**

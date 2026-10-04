@@ -8,11 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { PlatformField } from "@/features/catalog/platform-field";
+import { SeasonPicker, type SeasonSelection } from "@/features/catalog/season-picker";
 import { Camera, Check, Loader, Search } from "@/components/ui/icons";
 import { BarcodeScannerPanel } from "@/features/catalog/barcode-scanner-panel";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { SESSION_EXPIRED_MESSAGE, apiErrorMessage } from "@/lib/session-expired";
 import { LIST_NAMES } from "@/lib/added-notice";
+import { summarizePlatforms } from "@/lib/platforms";
+import { describeSeasons } from "@/lib/seasons";
 import { type AddDraft, clearAddDraft, saveAddDraft } from "@/lib/add-draft";
 import {
   MEDIA_TYPE_LABELS,
@@ -36,6 +39,17 @@ type Step = "search" | "scan" | "confirm" | "added";
 const SUCCESS_HOLD_MS = 320;
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Identifies a search result across searches (and its saved entry). */
+const resultKey = (result: Pick<UnifiedSearchResult, "source" | "mediaType" | "externalId">) =>
+  `${result.source}:${result.mediaType}:${result.externalId}`;
+
+/** "2004 · GameCube": the year, plus a game's platforms to tell releases apart. */
+function resultMeta(result: UnifiedSearchResult): string {
+  const year = result.releaseDate?.slice(0, 4) ?? "Unknown year";
+  const platforms = summarizePlatforms(result.availablePlatforms);
+  return platforms ? `${year} · ${platforms}` : year;
+}
 
 async function searchType(
   type: MediaType,
@@ -106,8 +120,24 @@ export function AddItemModal({
   const resultsCacheRef = useRef<Record<string, UnifiedSearchResult[] | null>>({});
   const [searchFailure, setSearchFailure] = useState<{ key: string; message: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Set by "Add another": select the kept query when the search step shows,
+  // so typing replaces it, and picking from the same results is one click.
+  const selectQueryOnShow = useRef(false);
+  // Titles added since the dialog opened, and to which list, so the
+  // results can mark them ("In your vault") when the user adds another.
+  const [addedThisSession, setAddedThisSession] = useState<Map<string, OwnershipStatus>>(
+    () => new Map(),
+  );
   const [selected, setSelected] = useState<UnifiedSearchResult | null>(draft?.result ?? null);
   const [platforms, setPlatforms] = useState<string[]>(draft?.platforms ?? []);
+  const [seasonSelection, setSeasonSelection] = useState<SeasonSelection>({
+    seasons: draft?.seasons ?? [],
+    completeSeries: draft?.completeSeries ?? false,
+  });
+  // Season counts looked up for the shows picked in this dialog, by result
+  // key: a number, or null when the lookup failed (the picker then takes
+  // typed numbers instead of chips).
+  const [seasonCounts, setSeasonCounts] = useState<Record<string, number | null>>({});
   // The save button that was pressed, and its look: loading while saving,
   // success for a moment after, error (a shake) when the input was rejected.
   const [savingAction, setSavingAction] = useState<OwnershipStatus | null>(null);
@@ -132,8 +162,35 @@ export function AddItemModal({
   // back, so closing the dialog (or the session expiring) doesn't lose it:
   // the page offers it back as "Finish adding".
   useEffect(() => {
-    if (step === "confirm" && selected) saveAddDraft({ result: selected, platforms });
-  }, [step, selected, platforms]);
+    if (step === "confirm" && selected) {
+      saveAddDraft({ result: selected, platforms, ...seasonSelection });
+    }
+  }, [step, selected, platforms, seasonSelection]);
+
+  // Search results don't say how many seasons a show has, so look it up
+  // when one is picked, to offer a chip per season.
+  const selectedKey = selected ? resultKey(selected) : null;
+  const needsSeasonCount =
+    step === "confirm" &&
+    selected?.mediaType === "TV" &&
+    selected.seasonCount === undefined &&
+    selectedKey !== null &&
+    !(selectedKey in seasonCounts);
+  useEffect(() => {
+    if (!needsSeasonCount || !selected || !selectedKey) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ source: selected.source, type: "tv", id: selected.externalId });
+    fetch(`/api/search/details?${params}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("lookup failed"))))
+      .then((data: { result: UnifiedSearchResult | null }) =>
+        setSeasonCounts((counts) => ({ ...counts, [selectedKey]: data.result?.seasonCount ?? null })),
+      )
+      .catch(() => {
+        if (!controller.signal.aborted) setSeasonCounts((counts) => ({ ...counts, [selectedKey]: null }));
+      });
+    return () => controller.abort();
+  }, [needsSeasonCount, selected, selectedKey]);
+  const seasonCount = selected?.seasonCount ?? (selectedKey ? seasonCounts[selectedKey] : undefined);
 
   useEffect(() => {
     if (!trimmedQuery) return;
@@ -213,25 +270,47 @@ export function AddItemModal({
       visibleResults.length === 1 ? "1 result" : `${visibleResults.length} results`;
   }
 
-  function reset() {
+  /** Clears the pick and the save, back to the search step. */
+  function clearPick() {
     if (successTimer.current) clearTimeout(successTimer.current);
     successTimer.current = null;
     setSavingAction(null);
     setSaveState("idle");
     setStep("search");
-    setQuery("");
-    // Reopening, or "Add another", searches afresh rather than reusing
-    // results from earlier in the session.
-    resultsCacheRef.current = {};
-    setResultsCache({});
-    setSearchFailure(null);
-    setRetryToken((token) => token + 1);
     setSelected(null);
     setSaveError(null);
     setExistingEntry(null);
     setAdded(null);
     setPlatforms([]);
+    setSeasonSelection({ seasons: [], completeSeries: false });
   }
+
+  /** Closing the dialog: everything goes, so reopening searches afresh. */
+  function reset() {
+    clearPick();
+    setQuery("");
+    resultsCacheRef.current = {};
+    setResultsCache({});
+    setSearchFailure(null);
+    setRetryToken((token) => token + 1);
+    setAddedThisSession(new Map());
+  }
+
+  /**
+   * "Add another" keeps the search: adding a second edition or platform of
+   * the same title (or the next result) is one click instead of retyping,
+   * and the kept results show what was just added.
+   */
+  function addAnother() {
+    clearPick();
+    selectQueryOnShow.current = true;
+  }
+
+  useEffect(() => {
+    if (step !== "search" || !selectQueryOnShow.current) return;
+    selectQueryOnShow.current = false;
+    searchInputRef.current?.select();
+  }, [step]);
 
   function handleRetry() {
     setRetryToken((token) => token + 1);
@@ -279,6 +358,9 @@ export function AddItemModal({
           // A wishlist item has no physical copy yet, so there's no format
           // or platform to record — whatever's in the field is ignored.
           platforms: ownership === "OWNED" ? platforms : [],
+          ...(selected.mediaType === "TV" && ownership === "OWNED"
+            ? { ownedSeasons: seasonSelection.seasons, completeSeries: seasonSelection.completeSeries }
+            : {}),
         }),
       });
       const data = await response.json();
@@ -299,6 +381,7 @@ export function AddItemModal({
       }
 
       clearAddDraft();
+      setAddedThisSession((current) => new Map(current).set(resultKey(selected), ownership));
       onAdded(data.entry as CatalogEntry);
       setAdded(data.entry as CatalogEntry);
       setSaveState("success");
@@ -495,10 +578,16 @@ export function AddItemModal({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-surface-foreground">{result.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {result.releaseDate?.slice(0, 4) ?? "Unknown year"}
-                        </p>
+                        <p className="truncate text-xs text-muted-foreground">{resultMeta(result)}</p>
                       </div>
+                      {addedThisSession.has(resultKey(result)) && (
+                        <Badge tone="success" className="shrink-0 gap-1">
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                          {addedThisSession.get(resultKey(result)) === "OWNED"
+                            ? "In your vault"
+                            : "On your wishlist"}
+                        </Badge>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -547,6 +636,16 @@ export function AddItemModal({
                 )}
               </div>
             </div>
+
+            {selected.mediaType === "TV" && (
+              <SeasonPicker
+                key={resultKey(selected)}
+                seasonCount={seasonCount}
+                seasons={seasonSelection.seasons}
+                completeSeries={seasonSelection.completeSeries}
+                onChange={setSeasonSelection}
+              />
+            )}
 
             <PlatformField
               key={`${selected.source}:${selected.mediaType}:${selected.externalId}`}
@@ -624,8 +723,13 @@ export function AddItemModal({
                     Wishlist items show neither, here or elsewhere. */}
                 {added.ownership === "OWNED" && (
                   <p className="text-sm text-muted-foreground">
-                    {getStatusLabel(added.status, added.mediaItem.mediaType)}
-                    {added.platforms.length > 0 && ` · ${added.platforms.join(", ")}`}
+                    {[
+                      getStatusLabel(added.status, added.mediaItem.mediaType),
+                      describeSeasons(added.ownedSeasons ?? [], added.completeSeries),
+                      added.platforms.join(", "),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 )}
               </div>
@@ -639,7 +743,7 @@ export function AddItemModal({
                 Done
               </Button>
               {/* Keeps the media type, which is one click to change on search. */}
-              <Button autoFocus onClick={reset} className="w-full sm:w-auto">
+              <Button autoFocus onClick={addAnother} className="w-full sm:w-auto">
                 Add another
               </Button>
             </div>

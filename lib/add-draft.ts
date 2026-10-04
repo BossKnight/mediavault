@@ -11,6 +11,9 @@ import type { MediaType, UnifiedSearchResult } from "@/types/media";
 export interface AddDraft {
   result: UnifiedSearchResult;
   platforms: string[];
+  // TV only. Optional so drafts saved before seasons existed still load.
+  seasons?: number[];
+  completeSeries?: boolean;
 }
 
 const KEY = "mediavault:add-draft";
@@ -19,8 +22,10 @@ const MEDIA_TYPES: readonly MediaType[] = ["MOVIE", "TV", "GAME", "BOOK"];
 
 function isDraft(value: unknown): value is AddDraft {
   if (typeof value !== "object" || value === null) return false;
-  const { result, platforms } = value as Partial<AddDraft>;
+  const { result, platforms, seasons, completeSeries } = value as Partial<AddDraft>;
   return (
+    (seasons === undefined || (Array.isArray(seasons) && seasons.every(Number.isInteger))) &&
+    (completeSeries === undefined || typeof completeSeries === "boolean") &&
     typeof result === "object" &&
     result !== null &&
     typeof result.title === "string" &&
