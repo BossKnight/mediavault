@@ -125,6 +125,12 @@ model UserMediaProgress {
   // sensibly once promoted, but is never surfaced as owned until then.
   ownership OwnershipStatus @default(OWNED)
 
+  // The physical copies owned (vault entries only). While an entry has
+  // none, its copies are read from the older platforms / platform /
+  // ownedSeasons / completeSeries fields above (lib/copies.ts); saving
+  // copies clears those, so each entry converts the first time it's saved.
+  copies Copy[]
+
   // One progress row per user per title.
   @@unique([userId, mediaItemId])
   @@index([userId, status])
@@ -139,4 +145,25 @@ model RateLimit {
   key         String   @id
   count       Int
   windowStart DateTime
+}
+
+// One physical copy of a title: a format or platform, an optional edition,
+// and for a TV show, the seasons it holds. An entry's platforms and
+// seasons owned are worked out from its copies.
+model Copy {
+  id         String            @id @default(cuid())
+  progressId String
+  progress   UserMediaProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+
+  // "Blu-Ray", "4K UHD", "Switch"; null when not recorded.
+  format         String?
+  // "Collector's Edition", free text.
+  edition        String?
+  // TV only.
+  seasons        Int[]   @default([])
+  completeSeries Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([progressId])
 }

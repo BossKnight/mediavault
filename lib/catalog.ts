@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { storedPlatforms } from "@/lib/platforms";
+import { copiesSummary, legacyCopies } from "@/lib/copies";
 import type {
   CatalogEntry,
   CatalogStats,
@@ -11,6 +11,7 @@ import type {
 /** Shared Prisma include so every route returns the same joined shape. */
 export const catalogEntryInclude = {
   mediaItem: true,
+  copies: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
 } satisfies Prisma.UserMediaProgressInclude;
 
 type ProgressWithMediaItem = Prisma.UserMediaProgressGetPayload<{
@@ -19,15 +20,27 @@ type ProgressWithMediaItem = Prisma.UserMediaProgressGetPayload<{
 
 /** Converts a Prisma UserMediaProgress + MediaItem row into the API/UI shape. */
 export function toCatalogEntry(row: ProgressWithMediaItem): CatalogEntry {
+  const mediaType = row.mediaItem.mediaType as MediaType;
+  // An entry with no stored copies yet is read from its older fields.
+  const legacy = row.copies.length === 0 ? legacyCopies(row, mediaType) : null;
+  const copies = legacy
+    ? legacy.copies.map((copy) => ({ id: null, ...copy }))
+    : row.copies.map(({ id, format, edition, seasons, completeSeries }) => ({
+        id,
+        format,
+        edition,
+        seasons,
+        completeSeries,
+      }));
   return {
     id: row.id,
     status: row.status as WatchStatus,
     ownership: row.ownership as OwnershipStatus,
     rating: row.rating,
     reviewNotes: row.reviewNotes,
-    ownedSeasons: row.ownedSeasons,
-    completeSeries: row.completeSeries,
-    platforms: storedPlatforms(row),
+    ...copiesSummary(copies),
+    copies,
+    seasonsNeedReview: legacy?.seasonsGuessed ?? false,
     hoursPlayed: row.hoursPlayed,
     startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,

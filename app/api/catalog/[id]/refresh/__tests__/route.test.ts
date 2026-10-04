@@ -45,6 +45,7 @@ const entry = {
   ownedSeasons: [],
   completeSeries: false,
   platforms: [],
+  copies: [],
   platform: null,
   hoursPlayed: null,
   startedAt: null,

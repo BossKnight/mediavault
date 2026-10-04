@@ -110,6 +110,17 @@ export interface UnifiedSearchResult {
  * A catalog entry as the frontend consumes it: the global media metadata
  * joined with the current user's personal progress on it.
  */
+/** One physical copy of an entry's title. */
+export interface CatalogCopy {
+  // null for a copy read from an entry saved before copies existed; it
+  // gets an id when the entry is next saved.
+  id: string | null;
+  format: string | null;
+  edition: string | null;
+  seasons: number[];
+  completeSeries: boolean;
+}
+
 export interface CatalogEntry {
   id: string; // UserMediaProgress id
   status: WatchStatus;
@@ -118,6 +129,12 @@ export interface CatalogEntry {
   reviewNotes: string | null;
   ownedSeasons: number[];
   completeSeries: boolean;
+  // The copies owned. platforms, ownedSeasons and completeSeries are
+  // worked out from them (lib/copies.ts).
+  copies: CatalogCopy[];
+  // True when an older entry's seasons were put on its first copy without
+  // knowing which copy holds them; the user should check.
+  seasonsNeedReview: boolean;
   // Every format or platform owned, e.g. ["DVD", "4K UHD"] or ["PS2", "Xbox"].
   platforms: string[];
   hoursPlayed: number | null;

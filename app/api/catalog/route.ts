@@ -5,6 +5,7 @@ import { MAX_PLATFORMS, MAX_PLATFORM_LENGTH, normalizePlatforms } from "@/lib/pl
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { cleanCopies, copiesInputSchema, legacyCopies } from "@/lib/copies";
 import { fetchCatalogPage, type CatalogQueryParams } from "@/lib/catalog-query";
 import { readMediaTypeParam, readSortParam, readStatusParam } from "@/lib/catalog-params";
 import { lookupMediaDetails } from "@/lib/external-apis";
@@ -42,20 +43,15 @@ const createCatalogSchema = z.object({
     .max(MAX_PLATFORMS, `List at most ${MAX_PLATFORMS} platforms or formats`)
     .transform(normalizePlatforms)
     .optional(),
-  // TV only, and only for the vault: which seasons are owned, or all of
-  // them. Ignored for other media types and for the wishlist.
+  // The copies owned (vault only). Requests from before copies existed
+  // send platforms, ownedSeasons and completeSeries instead, which are
+  // turned into copies the same way stored entries are.
+  copies: copiesInputSchema.optional(),
   ownedSeasons: z.array(z.number().int().min(1).max(500)).max(500).optional(),
   completeSeries: z.boolean().optional(),
 });
 
 const VALID_OWNERSHIP = ["OWNED", "WISHLIST"];
-
-/** The seasons to store for a new entry: owned TV only; "complete" means every season. */
-function ownedSeasonsData(data: z.infer<typeof createCatalogSchema>) {
-  if (data.mediaType !== "TV" || (data.ownership ?? "OWNED") !== "OWNED") return {};
-  if (data.completeSeries) return { completeSeries: true, ownedSeasons: [] };
-  return { ownedSeasons: [...new Set(data.ownedSeasons ?? [])].sort((a, b) => a - b) };
-}
 
 /**
  * Lists one page of the current user's catalog, with optional status /
@@ -155,15 +151,31 @@ export async function POST(request: Request) {
     mediaItem = (await refreshMediaItem(mediaItem).catch(() => null)) ?? mediaItem;
   }
 
+  // A wishlist item has no copies yet: whatever was sent is ignored.
+  const ownership = data.ownership ?? "OWNED";
+  const copies =
+    ownership !== "OWNED"
+      ? []
+      : data.copies
+        ? cleanCopies(data.copies, data.mediaType)
+        : legacyCopies(
+            {
+              platforms: data.platforms ?? [],
+              platform: null,
+              ownedSeasons: data.ownedSeasons ?? [],
+              completeSeries: data.completeSeries ?? false,
+            },
+            data.mediaType,
+          ).copies;
+
   try {
     const progress = await prisma.userMediaProgress.create({
       data: {
         userId,
         mediaItemId: mediaItem.id,
         status: data.status ?? "PLAN_TO_WATCH",
-        ownership: data.ownership ?? "OWNED",
-        platforms: data.platforms ?? [],
-        ...ownedSeasonsData(data),
+        ownership,
+        copies: { create: copies },
       },
       include: catalogEntryInclude,
     });
