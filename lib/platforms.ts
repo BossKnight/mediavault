@@ -106,3 +106,13 @@ export function storedPlatforms(row: { platforms: string[]; platform: string | n
   if (row.platforms.length > 0) return row.platforms;
   return row.platform ? [row.platform] : [];
 }
+
+/**
+ * A short platform list for a search result row: "PS5, PS4, Xbox One +4".
+ * Enough to tell an original from a remake without wrapping the row.
+ */
+export function summarizePlatforms(platforms: string[] | undefined, max = 3): string {
+  if (!platforms?.length) return "";
+  const shown = platforms.slice(0, max).join(", ");
+  return platforms.length > max ? `${shown} +${platforms.length - max}` : shown;
+}

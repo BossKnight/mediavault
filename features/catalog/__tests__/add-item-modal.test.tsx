@@ -221,3 +221,60 @@ describe("AddItemModal save button", () => {
     expect(save).toHaveAttribute("data-state", "idle");
   });
 });
+
+describe("AddItemModal repeat adds", () => {
+  const ttyd2004 = { ...result("Paper Mario: The Thousand-Year Door", "GAME"), externalId: "1", releaseDate: "2004-07-22", availablePlatforms: ["GameCube"] };
+  const ttyd2024 = { ...result("Paper Mario: The Thousand-Year Door", "GAME"), externalId: "2", releaseDate: "2024-05-23", availablePlatforms: ["Switch"] };
+
+  function renderGames() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          return new Response(
+            JSON.stringify({ entry: { id: body.externalId, status: "PLAN_TO_WATCH", ownership: body.ownership, platforms: body.platforms, mediaItem: body } }),
+            { status: 201 },
+          );
+        }
+        const type = new URL(url, "http://test").searchParams.get("type");
+        return new Response(JSON.stringify({ results: type === "game" ? [ttyd2004, ttyd2024] : [] }));
+      }),
+    );
+    const view = render(
+      <AddItemModal open onOpenChange={() => {}} returnFocusTo={{ current: null }} onAdded={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Game" }));
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "Paper Mario" } });
+    return view;
+  }
+
+  beforeEach(() => sessionStorage.clear());
+
+  it("tells same-named games apart by year and platform", async () => {
+    renderGames();
+    await act(() => vi.advanceTimersByTimeAsync(350));
+
+    expect(await screen.findByRole("button", { name: /2004 · GameCube/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /2024 · Switch/ })).toBeInTheDocument();
+  });
+
+  it("keeps the search after Add another, selected, and marks what was added", async () => {
+    renderGames();
+    await act(() => vi.advanceTimersByTimeAsync(350));
+    fireEvent.click(await screen.findByRole("button", { name: /2004 · GameCube/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "GameCube" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to vault" }));
+    await act(() => vi.advanceTimersByTimeAsync(400));
+
+    fireEvent.click(screen.getByRole("button", { name: "Add another" }));
+    const input = screen.getByLabelText("Search") as HTMLInputElement;
+    expect(input.value).toBe("Paper Mario");
+    expect(input).toHaveFocus();
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, "Paper Mario".length]);
+    // The kept results are back at once, without searching again.
+    expect(screen.getByRole("button", { name: /2004 · GameCube.*In your vault/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /2024 · Switch/ })).not.toHaveTextContent("In your vault");
+    expect(vi.mocked(fetch).mock.calls.filter(([, init]) => !init?.method).length).toBe(1);
+  });
+});

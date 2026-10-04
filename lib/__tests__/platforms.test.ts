@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  canonicalPlatform,
-  normalizePlatforms,
-  parsePlatformList,
-  storedPlatforms,
-} from "@/lib/platforms";
+import { canonicalPlatform, normalizePlatforms, parsePlatformList, storedPlatforms, summarizePlatforms } from "@/lib/platforms";
 import { BOOK_FORMATS, PHYSICAL_FORMATS } from "@/types/media";
 
 describe("normalizePlatforms", () => {
@@ -65,5 +60,18 @@ describe("normalizePlatforms with game platform names", () => {
       "PC",
       "Switch",
     ]);
+  });
+});
+
+describe("summarizePlatforms", () => {
+  it("lists up to three platforms and counts the rest", () => {
+    expect(summarizePlatforms(["GameCube"])).toBe("GameCube");
+    expect(summarizePlatforms(["PS5", "PS4", "Xbox One"])).toBe("PS5, PS4, Xbox One");
+    expect(summarizePlatforms(["PS5", "PS4", "Xbox One", "PC", "Switch"])).toBe("PS5, PS4, Xbox One +2");
+  });
+
+  it("is empty when there are none", () => {
+    expect(summarizePlatforms(undefined)).toBe("");
+    expect(summarizePlatforms([])).toBe("");
   });
 });

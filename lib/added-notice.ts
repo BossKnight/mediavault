@@ -2,14 +2,20 @@ import type { CatalogEntry, MediaType, OwnershipStatus, WatchStatus } from "@/ty
 
 export const LIST_NAMES: Record<OwnershipStatus, string> = { OWNED: "vault", WISHLIST: "wishlist" };
 
+/** A title to confirm, with its year when that's needed to tell it apart. */
+export type NoticeTitle = string | { title: string; year: string };
+
 /**
  * Confirms one or more items just added to a list: their titles for one or
  * two, a count beyond that.
  */
-export function addedNoticeMessage(titles: string[], ownership: OwnershipStatus): string {
+export function addedNoticeMessage(titles: NoticeTitle[], ownership: OwnershipStatus): string {
   const list = LIST_NAMES[ownership];
   if (titles.length > 2) return `Added ${titles.length} items to your ${list}.`;
-  return `Added ${titles.map((title) => `“${title}”`).join(" and ")} to your ${list}.`;
+  const named = titles.map((item) =>
+    typeof item === "string" ? `“${item}”` : `“${item.title}” (${item.year})`,
+  );
+  return `Added ${named.join(" and ")} to your ${list}.`;
 }
 
 export interface ListFilters {
@@ -48,12 +54,24 @@ export function withAddedEntry(notice: ListNotice | null, entry: CatalogEntry): 
   return { kind: "added", ownership: entry.ownership, entries: [entry] };
 }
 
+/**
+ * Titles for a notice, with the year added where two entries share a title
+ * (an original and its remake), so the message can tell them apart.
+ */
+export function distinctTitles(entries: CatalogEntry[]): NoticeTitle[] {
+  const counts = new Map<string, number>();
+  for (const { mediaItem } of entries) {
+    counts.set(mediaItem.title, (counts.get(mediaItem.title) ?? 0) + 1);
+  }
+  return entries.map(({ mediaItem: { title, releaseDate } }) => {
+    const year = releaseDate?.slice(0, 4);
+    return (counts.get(title) ?? 0) > 1 && year ? { title, year } : title;
+  });
+}
+
 export function listNoticeMessage(notice: ListNotice): string {
   if (notice.kind === "moved") return notice.message;
-  return addedNoticeMessage(
-    notice.entries.map((entry) => entry.mediaItem.title),
-    notice.ownership,
-  );
+  return addedNoticeMessage(distinctTitles(notice.entries), notice.ownership);
 }
 
 /** Ids of entries a list should highlight: ones just added to that list. */
