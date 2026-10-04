@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStats, recommendNext } from "@/lib/catalog";
+import { computeStats, recommendNext, toCatalogEntry } from "@/lib/catalog";
 import type { CatalogEntry } from "@/types/media";
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
@@ -12,6 +12,8 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     ownedSeasons: [],
     completeSeries: false,
     platforms: [],
+    copies: [],
+    seasonsNeedReview: false,
     hoursPlayed: null,
     startedAt: null,
     completedAt: null,
@@ -169,5 +171,57 @@ describe("recommendNext", () => {
     ];
 
     expect(recommendNext(entries).map((entry) => entry.id)).toEqual(["candidate"]);
+  });
+});
+
+describe("toCatalogEntry", () => {
+  type Row = Parameters<typeof toCatalogEntry>[0];
+  const row = (fields: Partial<Row>, mediaType = "TV"): Row =>
+    ({
+      id: "entry-1",
+      userId: "user-1",
+      mediaItemId: "media-1",
+      status: "PLAN_TO_WATCH",
+      ownership: "OWNED",
+      rating: null,
+      reviewNotes: null,
+      ownedSeasons: [],
+      completeSeries: false,
+      platforms: [],
+      platform: null,
+      hoursPlayed: null,
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+      copies: [],
+      mediaItem: { id: "media-1", source: "TMDB", externalId: "60573", mediaType, title: "Silicon Valley", releaseDate: null, coverUrl: null, overview: null, genres: [], creator: null, isbn: null, createdAt: new Date(), updatedAt: new Date() },
+      ...fields,
+    }) as Row;
+
+  it("reads stored copies and works out the platforms and seasons from them", () => {
+    const entry = toCatalogEntry(
+      row({
+        platforms: ["VHS"], // stale older value, ignored once copies exist
+        copies: [
+          { id: "c1", progressId: "entry-1", format: "Blu-Ray", edition: null, seasons: [4], completeSeries: false, createdAt: new Date() },
+          { id: "c2", progressId: "entry-1", format: "DVD", edition: "Box set", seasons: [5], completeSeries: false, createdAt: new Date() },
+        ],
+      }),
+    );
+    expect(entry.copies).toEqual([
+      { id: "c1", format: "Blu-Ray", edition: null, seasons: [4], completeSeries: false },
+      { id: "c2", format: "DVD", edition: "Box set", seasons: [5], completeSeries: false },
+    ]);
+    expect(entry).toMatchObject({ platforms: ["Blu-Ray", "DVD"], ownedSeasons: [4, 5], completeSeries: false, seasonsNeedReview: false });
+  });
+
+  it("reads an entry saved before copies existed from its older fields", () => {
+    const entry = toCatalogEntry(row({ platforms: ["Blu-Ray", "DVD"], ownedSeasons: [4, 5] }));
+    expect(entry.copies).toEqual([
+      { id: null, format: "Blu-Ray", edition: null, seasons: [4, 5], completeSeries: false },
+      { id: null, format: "DVD", edition: null, seasons: [], completeSeries: false },
+    ]);
+    expect(entry).toMatchObject({ platforms: ["Blu-Ray", "DVD"], ownedSeasons: [4, 5], seasonsNeedReview: true });
   });
 });

@@ -18,6 +18,7 @@ function makeRow(id: string) {
     ownedSeasons: [],
     completeSeries: false,
     platforms: [],
+    copies: [],
     hoursPlayed: null,
     startedAt: null,
     completedAt: null,

@@ -78,7 +78,8 @@ of; this app is the multi-user, cloud-backed rebuild described below.
 | `npm run typecheck` | Type-check with `tsc` |
 | `npm run lint` | Lint with ESLint |
 | `npm test` | Run the test suite |
-| `npm run prisma:migrate` | Apply schema migrations |
+| `npm run prisma:migrate` | Apply migrations in development (and create new ones) |
+| `npm run prisma:deploy` | Apply migrations in production |
 | `npm run prisma:studio` | Browse the database |
 
 ## Project structure
@@ -89,15 +90,45 @@ of; this app is the multi-user, cloud-backed rebuild described below.
 - `components/ui/` — shared, reusable UI primitives
 - `lib/` — utilities, Prisma client, auth config, and the external API service layer
 - `types/` — shared TypeScript types
-- `prisma/` — database schema and seed script
+- `prisma/` — database schema, migrations and seed script
 
-## Formats and platforms
+## Copies
 
-A title owned in several formats or on several platforms (a movie on DVD and 4K UHD, a game on
-PS2 and Xbox) is one vault entry that lists all of them, in `UserMediaProgress.platforms`.
-After pulling this change, run `npm run prisma:migrate`: it only adds the `platforms` column.
-Existing single values in the old `platform` column keep showing (as a one-item list) and move
-to `platforms` the next time each entry is saved, so no data is lost.
+Each vault entry holds the copies owned, in the `Copy` table: a format or platform, an optional
+edition, and for a TV show, the seasons that copy holds. A movie on Blu-Ray (Collector's Edition)
+and 4K UHD (Anniversary Edition) is one entry with two copies, as is a show with season 4 on
+Blu-Ray and season 5 on DVD. An entry's formats and seasons owned are worked out from its copies
+(`lib/copies.ts`).
+
+Entries saved before copies existed keep their older `platforms` / `platform` / `ownedSeasons` /
+`completeSeries` values, which are read as copies until the entry is next saved; saving writes
+real copies and clears the older fields. One case can't be read exactly: a show with seasons
+recorded and several formats, where there's no telling which copy holds which seasons. Those
+seasons go on the first copy, and the entry is flagged (`seasonsNeedReview`) for the user to check.
+
+## Migrations
+
+Migrations are committed in `prisma/migrations`, starting from a baseline (`0_init`) of the
+schema as it stood before copies. A new database gets everything from `npm run prisma:migrate`
+(development) or `npm run prisma:deploy` (production).
+
+### Upgrading an existing database
+
+Databases created before migrations were committed already have the baseline's tables. Tell
+Prisma so, then apply the rest:
+
+```bash
+npx prisma migrate resolve --applied 0_init
+npm run prisma:deploy
+```
+
+In development, `npm run prisma:migrate` will then list your old, locally generated migrations
+as "missing from the local migrations directory" and offer to reset the database. Don't: remove
+their records instead (the baseline covers the same schema), and it carries on normally:
+
+```sql
+DELETE FROM "_prisma_migrations" WHERE migration_name NOT IN ('0_init', '20261004000000_copies');
+```
 
 ## Title details
 

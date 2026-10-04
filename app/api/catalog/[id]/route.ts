@@ -4,6 +4,7 @@ import { MAX_PLATFORMS, MAX_PLATFORM_LENGTH, normalizePlatforms } from "@/lib/pl
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
 import { catalogEntryInclude, toCatalogEntry } from "@/lib/catalog";
+import { applyLegacyEdit, cleanCopies, copiesInputSchema, replaceCopiesData } from "@/lib/copies";
 
 const updateCatalogSchema = z.object({
   status: z
@@ -26,10 +27,14 @@ const updateCatalogSchema = z.object({
     .transform(normalizePlatforms)
     .optional(),
   hoursPlayed: z.number().min(0).nullable().optional(),
+  // Replaces every copy. Without it, platforms / ownedSeasons /
+  // completeSeries (the older shape Item Detail sends) edit the copies
+  // instead, keeping their editions.
+  copies: copiesInputSchema.optional(),
 });
 
 async function loadOwnedEntry(id: string, userId: string) {
-  const entry = await prisma.userMediaProgress.findUnique({ where: { id } });
+  const entry = await prisma.userMediaProgress.findUnique({ where: { id }, include: catalogEntryInclude });
   if (!entry || entry.userId !== userId) return null;
   return entry;
 }
@@ -58,7 +63,7 @@ export async function PUT(
     );
   }
 
-  const data = parsed.data;
+  const { copies, platforms, ownedSeasons, completeSeries, ...data } = parsed.data;
 
   // Stamp start/completion times the first time a status implies them, so
   // the user isn't required to set these manually.
@@ -70,12 +75,22 @@ export async function PUT(
     timestamps.completedAt = new Date();
   }
 
-  // Saving the list retires any legacy single value, so the two can't disagree.
-  const legacy = data.platforms ? { platform: null } : {};
+  const mediaType = existing.mediaItem.mediaType;
+  let copiesData = {};
+  if (copies) {
+    copiesData = replaceCopiesData(cleanCopies(copies, mediaType));
+  } else if (platforms || ownedSeasons || completeSeries !== undefined) {
+    // The entry's current copies, read from its older fields if it has
+    // none stored yet, with the edit applied.
+    const current = toCatalogEntry(existing).copies;
+    copiesData = replaceCopiesData(
+      applyLegacyEdit(current, { platforms, ownedSeasons, completeSeries }, mediaType),
+    );
+  }
 
   const updated = await prisma.userMediaProgress.update({
     where: { id },
-    data: { ...data, ...legacy, ...timestamps },
+    data: { ...data, ...copiesData, ...timestamps },
     include: catalogEntryInclude,
   });
 
